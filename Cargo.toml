@@ -1,0 +1,12 @@
+[package]
+name = "wordnet-angular"
+version = "0.1.0"
+authors = ["John McCrae <john@mccr.ae>"]
+
+[dependencies]
+rocket = "0.3.2"
+rocket_codegen = "0.3.2"
+skiplist = "0.2.10"
+xml-rs = "0.6"
+quick-error = "1.2.1"
+clap = "2.26.1"
