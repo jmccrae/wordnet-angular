@@ -25,7 +25,7 @@ fn get_static<'r>(name : String) -> Response<'r> {
     if name == "app.js" {
         Response::build()
             .header(ContentType::JavaScript)
-            .sized_body(Cursor::new(include_bytes!("app.js")))
+            .sized_body(Cursor::new(include_str!("app.js")))
             .finalize()
     } else {
         Response::build()
@@ -34,12 +34,40 @@ fn get_static<'r>(name : String) -> Response<'r> {
     }
 }
 
-#[get("/json/wn31/<id>")]
-fn synset_wn31(id : String, status : State<WordNetState>) -> Result<String, &'static str> {
-    match status.wordnet.synsets.get(&id) {
-        Some(ref synset) => { Ok(synset.definition.clone()) },
-        None => { Err("Fail") }
-    }
+#[get("/json/<index>/<id>")]
+fn synset<'r>(index : String, id : String, 
+              status : State<WordNetState>) 
+        -> Result<Response<'r>,&'static str> {
+    let synsets = (if index == "wn31" {
+        status.wordnet.synsets.get(&id)
+            .ok_or_else(|| "Synset Not Found")
+            .map(|x| vec![x.clone()])
+    } else if index == "lemma" {
+        match status.wordnet.by_lemma.get(&id)
+            .ok_or_else(|| "Synset Not Found") {
+            Ok(x) => {
+                Ok(x.iter().map(|y| {
+                    status.wordnet.synsets.get(y)
+                        .expect("Synset ID not found")
+                        .clone()
+                }).collect())
+            },
+            Err(e) => Err(e)
+        }
+    } else if index == "ili" {
+        status.wordnet.by_ili.get(&id)
+            .ok_or_else(|| "Synset Not Found")
+            .map(|x| {
+                vec![status.wordnet.synsets.get(x)
+                    .expect("Synset ID not found")
+                    .clone()]
+            })
+    } else {
+        Err("Bad ID")
+    })?;
+    Ok(Response::build()
+        .sized_body(Cursor::new("serde_json"))
+        .finalize())
 }
 
 #[get("/autocomplete/lemma/<key>")]
@@ -104,7 +132,7 @@ fn main() {
                 Ok(state) => {
                     rocket::ignite()
                         .manage(state)
-                        .mount("/", routes![index, synset_wn31,
+                        .mount("/", routes![index, synset,
                                 autocomplete_lemma, get_static]).launch();
                 },
                 Err(msg) => {

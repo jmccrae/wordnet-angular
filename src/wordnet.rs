@@ -6,6 +6,7 @@ use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
 use stable_skiplist::OrderedSkipList;
 
+#[derive(Clone,Debug)]
 pub struct Synset {
     pub definition : String,
     pub lemmas : Vec<Sense>,
@@ -15,6 +16,7 @@ pub struct Synset {
     pub relations : Vec<Relation>
 }
 
+#[derive(Clone,Debug)]
 pub struct Sense {
     pub lemma : String,
     pub forms : Vec<String>,
@@ -22,7 +24,7 @@ pub struct Sense {
     pub subcats : Vec<String>
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct Relation {
     pub src_word : Option<String>,
     pub trg_word : Option<String>,
@@ -32,7 +34,7 @@ pub struct Relation {
 
 pub struct WordNet {
     pub synsets : HashMap<String, Synset>,
-    pub by_lemma : HashMap<String, String>,
+    pub by_lemma : HashMap<String, Vec<String>>,
     pub by_ili : HashMap<String, String>,
     pub id_skiplist : OrderedSkipList<String>,
     pub lemma_skiplist : OrderedSkipList<String>,
@@ -272,10 +274,10 @@ impl WordNet {
         let mut wordnet = WordNet{
             synsets: synsets,
             by_lemma: HashMap::new(),
-            by_ili: HashMap::new()
+            by_ili: HashMap::new(),
             lemma_skiplist: lemma_skiplist,
-            ili_skiplist: ili_skiplist,
-            id_skiplist: id_skiplist
+            ili_skiplist: OrderedSkipList::new(),
+            id_skiplist: OrderedSkipList::new()
         };
         build_indexes(&mut wordnet);
         Ok(wordnet)
@@ -283,7 +285,15 @@ impl WordNet {
 }
 
 fn build_indexes(wordnet : &mut WordNet) {
-    for synsets in wordnet.synset.values() {
+    for (id, synset) in wordnet.synsets.iter() {
+        wordnet.ili_skiplist.insert(synset.ili.clone());
+        wordnet.id_skiplist.insert(id.clone());
+        wordnet.by_ili.insert(synset.ili.clone(), id.clone());
+        for sense in synset.lemmas.iter() {
+            wordnet.by_lemma.entry(sense.lemma.clone())
+                .or_insert_with(|| Vec::new())
+                .push(id.clone());
+        }
 
     }
 }
