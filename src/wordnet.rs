@@ -4,6 +4,7 @@ use std::io::BufReader;
 use xml::reader::{EventReader, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
+use stable_skiplist::OrderedSkipList;
 
 pub struct Synset {
     pub definition : String,
@@ -11,7 +12,8 @@ pub struct Synset {
 }
 
 pub struct WordNet {
-    pub synsets : HashMap<String, Synset>
+    pub synsets : HashMap<String, Synset>,
+    pub lemma_skiplist : OrderedSkipList<String>
 }
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
@@ -31,6 +33,7 @@ impl WordNet {
         let mut in_def = false;
         let mut definition = None;
         let mut synsets = HashMap::new();
+        let mut lemma_skiplist = OrderedSkipList::new();
 
         for e in parse {
             match e {
@@ -60,7 +63,8 @@ impl WordNet {
                                     "Lemma does not have writtenForm"));
                             }
                         };
-                        entry_id_to_lemma.insert(entry_id, lemma);
+                        entry_id_to_lemma.insert(entry_id, lemma.clone());
+                        lemma_skiplist.insert(lemma);
                     } else if name.local_name == "Sense" {
                         let entry_id = match lexical_entry_id {
                             Some(ref i) => i.clone(),
@@ -124,7 +128,8 @@ impl WordNet {
             }
         }
         Ok(WordNet{
-            synsets: synsets
+            synsets: synsets,
+            lemma_skiplist: lemma_skiplist
         })
     }
 }

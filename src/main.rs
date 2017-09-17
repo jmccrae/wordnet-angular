@@ -2,7 +2,7 @@
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
-extern crate skiplist;
+extern crate stable_skiplist;
 extern crate xml;
 #[macro_use]
 extern crate quick_error;
@@ -14,6 +14,26 @@ use wordnet::WordNet;
 use clap::{App, Arg, ArgMatches};
 use std::process::exit;
 use rocket::State;
+use rocket::Response;
+use rocket::http::{ContentType, Status};
+use stable_skiplist::Bound::{Included, Unbounded};
+use std::io::Cursor;
+
+
+#[get("/static/<name>")]
+fn get_static<'r>(name : String) -> Response<'r> {
+    if name == "app.js" {
+        Response::build()
+            .header(ContentType::JavaScript)
+            .sized_body(Cursor::new(include_bytes!("app.js")))
+            .finalize()
+    } else {
+        Response::build()
+            .status(Status::NotFound)
+            .finalize()
+    }
+}
+        
 
 #[get("/json/wn31/<id>")]
 fn synset_wn31(id : String, status : State<WordNetState>) -> Result<String, &'static str> {
@@ -23,9 +43,22 @@ fn synset_wn31(id : String, status : State<WordNetState>) -> Result<String, &'st
     }
 }
 
+#[get("/autocomplete/lemma/<key>")]
+fn autocomplete_lemma(key : String, state : State<WordNetState>) 
+    -> String {
+    let mut buf = String::new();
+    for s in state.wordnet.lemma_skiplist.range(Included(&key), Unbounded).take(10) {
+        buf.push_str(s);
+        buf.push_str("\n");
+    }   
+    buf
+}
+
 #[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
+fn index<'r>() -> Response<'r> {
+    Response::build()
+        .sized_body(Cursor::new(include_str!("index.html")))
+        .finalize()
 }
 
 struct Config {
@@ -46,8 +79,10 @@ struct WordNetState {
 }
 
 fn prepare_server(config : Config) -> Result<WordNetState, String> {
+    eprintln!("Loading WordNet data");
     let wordnet = WordNet::load(config.wn_file)
       .map_err(|e| format!("Failed to load WordNet: {}", e))?;
+    eprintln!("Loaded {} synsets", wordnet.synsets.len());
     Ok(WordNetState {
         wordnet: wordnet
     })
@@ -70,7 +105,8 @@ fn main() {
                 Ok(state) => {
                     rocket::ignite()
                         .manage(state)
-                        .mount("/", routes![index, synset_wn31]).launch();
+                        .mount("/", routes![index, synset_wn31,
+                                autocomplete_lemma, get_static]).launch();
                 },
                 Err(msg) => {
                     eprintln!("{}", msg);
