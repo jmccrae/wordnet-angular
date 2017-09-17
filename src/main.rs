@@ -33,7 +33,6 @@ fn get_static<'r>(name : String) -> Response<'r> {
             .finalize()
     }
 }
-        
 
 #[get("/json/wn31/<id>")]
 fn synset_wn31(id : String, status : State<WordNetState>) -> Result<String, &'static str> {

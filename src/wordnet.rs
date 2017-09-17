@@ -32,7 +32,11 @@ pub struct Relation {
 
 pub struct WordNet {
     pub synsets : HashMap<String, Synset>,
-    pub lemma_skiplist : OrderedSkipList<String>
+    pub by_lemma : HashMap<String, String>,
+    pub by_ili : HashMap<String, String>,
+    pub id_skiplist : OrderedSkipList<String>,
+    pub lemma_skiplist : OrderedSkipList<String>,
+    pub ili_skiplist : OrderedSkipList<String>
 }
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
@@ -265,10 +269,22 @@ impl WordNet {
                 Err(e) => { return Err(WordNetLoadError::Xml(e)); }
             }
         }
-        Ok(WordNet{
+        let mut wordnet = WordNet{
             synsets: synsets,
-            lemma_skiplist: lemma_skiplist
-        })
+            by_lemma: HashMap::new(),
+            by_ili: HashMap::new()
+            lemma_skiplist: lemma_skiplist,
+            ili_skiplist: ili_skiplist,
+            id_skiplist: id_skiplist
+        };
+        build_indexes(&mut wordnet);
+        Ok(wordnet)
+    }
+}
+
+fn build_indexes(wordnet : &mut WordNet) {
+    for synsets in wordnet.synset.values() {
+
     }
 }
 
