@@ -7,6 +7,10 @@ extern crate xml;
 #[macro_use]
 extern crate quick_error;
 extern crate clap;
+//extern crate serde;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 
 mod wordnet;
 
@@ -18,14 +22,23 @@ use rocket::Response;
 use rocket::http::{ContentType, Status};
 use stable_skiplist::Bound::{Included, Unbounded};
 use std::io::Cursor;
-
+use std::fs::File;
 
 #[get("/static/<name>")]
 fn get_static<'r>(name : String) -> Response<'r> {
     if name == "app.js" {
         Response::build()
             .header(ContentType::JavaScript)
-            .sized_body(Cursor::new(include_str!("app.js")))
+            .sized_body(File::open("src/app.js").unwrap())
+//            .sized_body(Cursor::new(include_str!("app.js")))
+            .finalize()
+    } else if name == "favicon.ico" {
+        Response::build()
+            .sized_body(File::open("src/favicon.ico").unwrap())
+            .finalize()
+    } else if name == "synset.html" {
+        Response::build()
+            .sized_body(File::open("src/synset.html").unwrap())
             .finalize()
     } else {
         Response::build()
@@ -65,26 +78,37 @@ fn synset<'r>(index : String, id : String,
     } else {
         Err("Bad ID")
     })?;
+    let json = serde_json::to_string(&synsets)
+        .map_err(|_| "Failed to serialize synset")?;
     Ok(Response::build()
-        .sized_body(Cursor::new("serde_json"))
+        .sized_body(Cursor::new(json))
         .finalize())
+}
+
+#[derive(Clone,Debug,Serialize,Deserialize)]
+struct AutocompleteResult {
+    display: String,
+    item: String
 }
 
 #[get("/autocomplete/lemma/<key>")]
 fn autocomplete_lemma(key : String, state : State<WordNetState>) 
-    -> String {
-    let mut buf = String::new();
+    -> serde_json::Result<String> {
+    let mut results = Vec::new();
     for s in state.wordnet.lemma_skiplist.range(Included(&key), Unbounded).take(10) {
-        buf.push_str(s);
-        buf.push_str("\n");
+        results.push(AutocompleteResult {
+            display: s.to_string(),
+            item: s.to_string()
+        })
     }   
-    buf
+    serde_json::to_string(&results)
 }
 
 #[get("/")]
 fn index<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(Cursor::new(include_str!("index.html")))
+        .sized_body(File::open("src/index.html").unwrap())
+        //.sized_body(Cursor::new(include_str!("index.html")))
         .finalize()
 }
 

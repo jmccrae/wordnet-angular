@@ -6,7 +6,7 @@ use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
 use stable_skiplist::OrderedSkipList;
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Synset {
     pub definition : String,
     pub lemmas : Vec<Sense>,
@@ -16,7 +16,7 @@ pub struct Synset {
     pub relations : Vec<Relation>
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Sense {
     pub lemma : String,
     pub forms : Vec<String>,
@@ -24,7 +24,7 @@ pub struct Sense {
     pub subcats : Vec<String>
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Relation {
     pub src_word : Option<String>,
     pub trg_word : Option<String>,
