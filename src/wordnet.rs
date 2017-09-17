@@ -10,6 +10,7 @@ use stable_skiplist::OrderedSkipList;
 pub struct Synset {
     pub definition : String,
     pub lemmas : Vec<Sense>,
+    pub id : String,
     pub ili : String,
     pub pos : String,
     pub subject : String,
@@ -99,7 +100,9 @@ impl WordNet {
                         };
                         entry_lemma = Some(lemma.clone());
                         entry_id_to_lemma.insert(entry_id, lemma.clone());
-                        lemma_skiplist.insert(lemma);
+                        if !lemma_skiplist.contains(&lemma) {
+                            lemma_skiplist.insert(lemma);
+                        }
                     } else if name.local_name == "Sense" {
                         let entry_id = match lexical_entry_id {
                             Some(ref i) => i.clone(),
@@ -108,17 +111,17 @@ impl WordNet {
                                     "Lemma outside of LexicalEntry"))
                             }
                          };
-                         match attr_value(&attributes, "identifier") {
-                            Some(i) => {
-                                sense_keys.entry(entry_id.clone())
-                                    .or_insert_with(|| Vec::new())
-                                    .push(i);
-                            },
-                            None => {}
-                         };
                          let target = attr_value(&attributes, "synset")
                             .ok_or_else(|| WordNetLoadError::Schema(
                                     "Sense does not have a synset"))?;
+                         match attr_value(&attributes, "identifier") {
+                            Some(i) => {
+                                sense_keys.entry(entry_id.clone())
+                                    .or_insert_with(|| HashMap::new())
+                                    .insert(target.clone(), i);
+                            },
+                            None => {}
+                         };
                          synset = Some(target.clone());
                          synset_to_entry.entry(target.clone())
                             .or_insert_with(|| Vec::new())
@@ -219,7 +222,7 @@ impl WordNet {
                                         .expect("Entry must have lemma")
                                         .clone(),
                                     forms: Vec::new(),
-                                    sense_key: "".to_string(),
+                                    sense_key: sense_keys[x][&ssid].clone(),
                                     subcats: subcats.get(x)
                                         .map(|x| x.clone())
                                         .unwrap_or_else(|| Vec::new())
@@ -246,10 +249,11 @@ impl WordNet {
                                 }
                             })
                             .collect();
-                        synsets.insert(ssid,
+                        synsets.insert(ssid.clone(),
                             Synset {
                                 definition: defn,
                                 lemmas: entries,
+                                id: ssid,
                                 ili: ili,
                                 pos: pos,
                                 subject: subject,

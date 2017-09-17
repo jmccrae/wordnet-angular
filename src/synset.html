@@ -1,1 +1,27 @@
-<span ng-bind="$ctrl.synset.definition"></span>
+<div class="synset">
+    <div class="synset-id" ng-show="$ctrl.display.ids">
+        <span ng-bind="$ctrl.synset.id" class="identifier"></span>              (<b class="synset-id-title">Interlingual Index:</b> 
+        <span ng-bind="$ctrl.synset.ili" class="identifier"></span>)
+    </div>
+        
+    <div class="lemmas">
+        <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
+            <span ng-bind="sense.lemma"></span>
+            <span class="forms" ng-show="$ctrl.display.forms">
+                <span class="form" ng-repeat="form in sense.forms">{{form}}</span>
+            </span>
+            <span ng-bind="sense.sense_key" class="sense_key" ng-show="$ctrl.display.sensekeys"></span>
+            <span class="subcats" ng-show="$ctrl.display.subcats">
+                <span class="subcat" ng-repeat="subcat in subcats">{{subcat.replace('%s', sense.lemma)}}</span>
+        </span>
+        </span>
+        <span ng-bind="$ctrl.synset.definition" class="definition"></span>
+        <relation display="$ctrl.display"
+            fullname="Hypernym"
+            relation="hypernym"
+            relations="$ctrl.synset.relations"/>
+
+        <button class="btn pull-right" type="button"
+            ng-click="$ctrl.show_relations = !$ctrl.show_relations">More</button>
+    </div>
+</div>

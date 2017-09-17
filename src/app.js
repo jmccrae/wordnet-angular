@@ -1,8 +1,13 @@
 angular.module('app', ['ngMaterial']);
 
-angular.module('app').controller('WordNetController', 
-        function($scope, $http) {
-    $scope.synsets = [];
+angular.module('app').component('wordnet', {
+    templateUrl: 'static/wordnet.html',
+    controller: function($scope) {
+        $scope.synsets = [];
+        $scope.display = {
+            show_wn31: true
+        };
+    }
 });
 
 angular.module('app').controller('SearchController',
@@ -34,6 +39,31 @@ angular.module('app').controller('SearchController',
 angular.module('app').component('synset', {
         templateUrl: '/static/synset.html',
         bindings: {
-            synset: '='
+            synset: '=',
+            display: '<'
         }
     });
+
+angular.module('app').component('relation', {
+        templateUrl: '/static/relation.html',
+        bindings: {
+            fullname: '@',
+            relation: '@',
+            relations: '=',
+            display: '<'
+        }
+    });
+
+
+angular.module('app').filter('isAdjective', function() {
+    return function(items) {
+        var filtered = [];
+        for(var i = 0; i < items.length; i++) {
+            var item = items[i];
+            if(item.pos === 'a' || item.pos === 's') {
+                filtered.push(item);
+            }
+        }
+        return filtered;
+    }
+});

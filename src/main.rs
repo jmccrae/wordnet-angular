@@ -40,6 +40,19 @@ fn get_static<'r>(name : String) -> Response<'r> {
         Response::build()
             .sized_body(File::open("src/synset.html").unwrap())
             .finalize()
+    } else if name == "wordnet.html" {
+        Response::build()
+            .sized_body(File::open("src/wordnet.html").unwrap())
+            .finalize()
+    } else if name == "relation.html" {
+        Response::build()
+            .sized_body(File::open("src/relation.html").unwrap())
+            .finalize()
+    } else if name == "wn.css" {
+        Response::build()
+            .header(ContentType::CSS)
+            .sized_body(File::open("src/wn.css").unwrap())
+            .finalize()
     } else {
         Response::build()
             .status(Status::NotFound)

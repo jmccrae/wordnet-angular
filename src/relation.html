@@ -1,0 +1,9 @@
+<h3>{{$ctrl.fullname}}</h3>
+<span ng-repeat="relation in $ctrl.relations | filter:{'rel_type':$ctrl.relation}">
+    <div ng-show="relation.src_word">
+        <span ng-bind="relation.src_word"> &#x2192; 
+            <span ng-bind="relation.trg_word">
+    </div>
+    <div>{{relation.target}}</div>
+</span>
+
