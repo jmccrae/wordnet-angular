@@ -9,6 +9,7 @@
                 md-items="item in ctrl.querySearch(ctrl.searchText)" 
                 md-item-text="item.display" 
                 md-min-length="2" 
+                md-no-cache="true"
                 placeholder="Search">
                 <md-item-template>
                     <span md-highlight-text="ctrl.searchText" md-highlight-flags="^i">{{item.display}}</span>
@@ -21,9 +22,9 @@
     </div>
     <div>
         <md-checkbox ng-model="display.ids">Show Synset Identifier</md-checkbox>
-        <md-checkbox ng-model="display.forms">Show Forms</md-checkbox>
         <md-checkbox ng-model="display.sensekeys">Show Sense Keys</md-checkbox>
         <md-checkbox ng-model="display.subcats">Show Subcategorization Frames</md-checkbox>
+        <md-checkbox ng-model="display.topics">Show Topics</md-checkbox>
     </div>
     <h3 ng-show="(synsets|filter:{'pos':'n'}).length > 0">Nouns</h3>
     <div ng-repeat="synset in synsets | filter:{'pos':'n'}">

@@ -2,26 +2,125 @@
     <div class="synset-id" ng-show="$ctrl.display.ids">
         <span ng-bind="$ctrl.synset.id" class="identifier"></span>              (<b class="synset-id-title">Interlingual Index:</b> 
         <span ng-bind="$ctrl.synset.ili" class="identifier"></span>)
+        <hr/>
     </div>
         
     <div class="lemmas">
+        <span class="pos">({{$ctrl.synset.pos}})</span>
         <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
             <span ng-bind="sense.lemma"></span>
             <span class="forms" ng-show="$ctrl.display.forms">
                 <span class="form" ng-repeat="form in sense.forms">{{form}}</span>
             </span>
             <span ng-bind="sense.sense_key" class="sense_key" ng-show="$ctrl.display.sensekeys"></span>
-            <span class="subcats" ng-show="$ctrl.display.subcats">
-                <span class="subcat" ng-repeat="subcat in subcats">{{subcat.replace('%s', sense.lemma)}}</span>
         </span>
         </span>
         <span ng-bind="$ctrl.synset.definition" class="definition"></span>
-        <relation display="$ctrl.display"
-            fullname="Hypernym"
-            relation="hypernym"
-            relations="$ctrl.synset.relations"/>
+        <div ng-show="$ctrl.display.topics" class="topic">
+            <b>Topic: </b> {{$ctrl.synset.subject}}
+        </div>
+        <div ng-show="$ctrl.display.subcats" class="subcats">
+            <b>Subcategorization Frames:</b>
+            <ul ng-repeat="sense in $ctrl.synset.lemmas">
+            <li class="subcat" ng-repeat="subcat in sense.subcats">{{subcat.replace('%s', sense.lemma)}}</span>
+            </ul>
+        </div>
+        <span ng-if="$ctrl.show_relations">
+            <relation display="$ctrl.display"
+                fullname="Hypernyms"
+                relation="hypernym"
+                relations="$ctrl.synset.relations"></relation>
+            <relation relation="hyponym" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Hyponyms"></relation>
+             <relation relation="antonym" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Antonyms"></relation>
+            <relation relation="attribute" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Attributes"></relation>
+            <relation relation="causes" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Causes"></relation>
+            <relation relation="derivation" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Derived Forms"></relation>
+            <relation relation="domain_category" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Domains (category)"></relation>
+            <relation relation="domain_member_category" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Members (category)"></relation>
+            <relation relation="domain_member_region" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Members (region)"></relation>
+            <relation relation="domain_region" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Domains (region)"></relation>
+            <relation relation="domain_topic" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Domains (topic)"></relation>
+            <relation relation="entails" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Entails"></relation>
+            <relation relation="exemplifies" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Exemplifies"></relation>
+            <relation relation="has_domain_region" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Members (region)"></relation>
+            <relation relation="has_domain_topic" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Members (topic)"></relation>
+            <relation relation="holo_member" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Holonyms (member)"></relation>
+            <relation relation="holo_part" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Holonyms (part)"></relation>
+            <relation relation="holo_substance" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Holonyms (substance)"></relation>
+            <relation relation="also" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="See Also"></relation>
+           <relation relation="instance_hypernym" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Is Instance of"></relation>
+            <relation relation="instance_hyponym" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Instances"></relation>
+            <relation relation="is_exemplified_by" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Is Exemplified By"></relation>
+            <relation relation="mero_member" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Meronyms (member)"></relation>
+            <relation relation="mero_part" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Meronyms (part)"></relation>
+            <relation relation="mero_substance" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Meronyms (substance)"></relation>
+            <relation relation="participle" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Participles"></relation>
+            <relation relation="pertainym" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Pertainyms"></relation>
+            <relation relation="similar" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Similar to"></relation>
+            <relation relation="verb_group" display="$ctrl.display"
+                relations="$ctrl.synset.relations"
+                fullname="Verb groups"></relation>
 
-        <button class="btn pull-right" type="button"
-            ng-click="$ctrl.show_relations = !$ctrl.show_relations">More</button>
+        </span>
+
+        <div class="more">
+            <a href="#"
+                ng-show="!$ctrl.show_relations"
+                ng-click="$ctrl.show_relations = !$ctrl.show_relations">MORE &#x25B6;</a>
+        </div>
     </div>
 </div>

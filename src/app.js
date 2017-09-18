@@ -44,6 +44,25 @@ angular.module('app').component('synset', {
         }
     });
 
+angular.module('app').component('synset2', {
+    templateUrl: '/static/synset.html',
+    bindings: {
+        target: '<',
+        display: '<'
+    },
+    controller: function($http) {
+        var ctrl = this;
+        ctrl.synset = {};
+        $http.get("/json/wn31/" + ctrl.target).then(
+            function(response) {
+                ctrl.synset = response.data[0];
+            },
+            function(response) {
+                console.log(response.data);
+            });
+    }
+});
+
 angular.module('app').component('relation', {
         templateUrl: '/static/relation.html',
         bindings: {
@@ -51,7 +70,24 @@ angular.module('app').component('relation', {
             relation: '@',
             relations: '=',
             display: '<'
+//        },
+//        controller: function($scope,$http) {
+//            console.log("Loading synsets");
+//            for(r = 0; r < this.relations.length; r++) {
+//                var relation = this.relations[r];
+//                console.log(relation);
+//                $http.get("/json/wn31/" + relation.target).then(
+//                    function(response) {
+//                        console.log(response.data);
+//                        relation.synset = response.data[0];
+//                        console.log(relation);
+//                    },
+//                    function(response) {
+//                        console.log(response.data);
+//                    });
+//            }
         }
+
     });
 
 

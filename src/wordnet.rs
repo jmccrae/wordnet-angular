@@ -221,6 +221,7 @@ impl WordNet {
                                     lemma: entry_id_to_lemma.get(x)
                                         .expect("Entry must have lemma")
                                         .clone(),
+                                    // TODO
                                     forms: Vec::new(),
                                     sense_key: sense_keys[x][&ssid].clone(),
                                     subcats: subcats.get(x)
