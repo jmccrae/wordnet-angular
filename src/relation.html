@@ -1,14 +1,14 @@
-<h3 ng-if="($ctrl.relations|filter:{'rel_type':$ctrl.relation}).length > 0">{{$ctrl.fullname}}</h3>
-<span ng-repeat="relation in $ctrl.relations | filter:{'rel_type':$ctrl.relation}">
-    <table width="100%">
-        <tr> 
-    <td ng-if="relation.src_word" width="20%">
-        {{relation.src_word}} &#x2192; {{relation.trg_word}}
-        </td>
-        <td>
-    <synset2 target="relation.target" display="$ctrl.display"></synset2>
-        </td>
-    </tr>
-    </table>
+<div class="relation-title" ng-if="($ctrl.relations|filter:{'rel_type':$ctrl.relation}).length > 0">
+    <a href="#" ng-click="$ctrl.show = !$ctrl.show">{{$ctrl.fullname}} ({{($ctrl.relations|filter:{'rel_type':$ctrl.relation}).length}})</a></div>
+<span ng-repeat="relation in $ctrl.relations | filter:{'rel_type':$ctrl.relation}" ng-show="$ctrl.show">
+    <div ng-if="relation.src_word" class="relation-word">
+        From {{relation.src_word}}:
+<synset2 target="relation.target" display="$ctrl.display"
+focus="relation.trg_word"></synset2>
+    </div>
+    <div ng-if="!relation.src_word">
+<synset2 target="relation.target" display="$ctrl.display"
+focus="relation.trg_word"></synset2>
+    </div>
 </span>
 

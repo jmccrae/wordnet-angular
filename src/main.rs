@@ -13,6 +13,7 @@ extern crate serde_json;
 extern crate serde_derive;
 
 mod wordnet;
+mod glosstag;
 
 use wordnet::WordNet;
 use clap::{App, Arg, ArgMatches};
@@ -64,7 +65,7 @@ fn get_static<'r>(name : String) -> Response<'r> {
 fn synset<'r>(index : String, id : String, 
               status : State<WordNetState>) 
         -> Result<Response<'r>,&'static str> {
-    let synsets = (if index == "wn31" {
+    let synsets = (if index == "id" {
         status.wordnet.synsets.get(&id)
             .ok_or_else(|| "Synset Not Found")
             .map(|x| vec![x.clone()])
@@ -88,7 +89,23 @@ fn synset<'r>(index : String, id : String,
                     .expect("Synset ID not found")
                     .clone()]
             })
-    } else {
+    } else if index == "sense_key" {
+        status.wordnet.by_sense_key.get(&id)
+            .ok_or_else(|| "Synset Not Found")
+            .map(|x| {
+                vec![status.wordnet.synsets.get(x)
+                    .expect("Synset ID not found")
+                    .clone()]
+            })
+     } else if status.wordnet.by_old_id.contains_key(&index) {
+        status.wordnet.by_old_id[&index].get(&id)
+            .ok_or_else(|| "Synset Not Found")
+            .map(|x| {
+                vec![status.wordnet.synsets.get(x)
+                    .expect("Synset ID not found")
+                    .clone()]
+            })
+      } else {
         Err("Bad ID")
     })?;
     let json = serde_json::to_string(&synsets)
@@ -104,18 +121,79 @@ struct AutocompleteResult {
     item: String
 }
 
-#[get("/autocomplete/lemma/<key>")]
-fn autocomplete_lemma(key : String, state : State<WordNetState>) 
-    -> serde_json::Result<String> {
+#[get("/autocomplete/<index>/<key>")]
+fn autocomplete_lemma(index : String, key : String, 
+        state : State<WordNetState>) -> serde_json::Result<String> {
     let mut results = Vec::new();
-    for s in state.wordnet.lemma_skiplist.range(Included(&key), Unbounded).take(10) {
-        results.push(AutocompleteResult {
-            display: s.to_string(),
-            item: s.to_string()
-        })
-    }   
+    if index == "lemma" {
+        for s in state.wordnet.lemma_skiplist.range(Included(&key), Unbounded).take(10) {
+            if s.starts_with(&key) {
+                results.push(AutocompleteResult {
+                    display: s.to_string(),
+                    item: s.to_string()
+                })
+            }
+        }   
+    } else if index == "id" {
+        for s in state.wordnet.id_skiplist.range(Included(&key), Unbounded).take(10) {
+            if s.starts_with(&key) {
+                results.push(AutocompleteResult {
+                    display: s.to_string(),
+                    item: s.to_string()
+                })
+            }
+        }   
+    } else if index == "ili" {
+        for s in state.wordnet.ili_skiplist.range(Included(&key), Unbounded).take(10) {
+            if s.starts_with(&key) {
+                results.push(AutocompleteResult {
+                    display: s.to_string(),
+                    item: s.to_string()
+                })
+            }
+        }   
+     } else if index == "sense_key" {
+        for s in state.wordnet.sense_key_skiplist.range(Included(&key), Unbounded).take(10) {
+            if s.starts_with(&key) {
+                results.push(AutocompleteResult {
+                    display: s.to_string(),
+                    item: s.to_string()
+                })
+            }
+        }   
+     } else if state.wordnet.old_skiplist.contains_key(&index) {
+        for s in state.wordnet.old_skiplist[&index].range(Included(&key), Unbounded).take(10) {
+            if s.starts_with(&key) {
+                results.push(AutocompleteResult {
+                    display: s.to_string(),
+                    item: s.to_string()
+                })
+            }
+        }   
+}
     serde_json::to_string(&results)
 }
+
+#[get("/lemma/<_key>")]
+fn lemma<'r>(_key : String) -> Response<'r> { index() }
+#[get("/id/<_key>")]
+fn id<'r>(_key : String) -> Response<'r> { index() }
+#[get("/ili/<_key>")]
+fn ili<'r>(_key : String) -> Response<'r> { index() }
+#[get("/sense_key/<_key>")]
+fn sense_key<'r>(_key : String) -> Response<'r> { index() }
+#[get("/pwn30/<_key>")]
+fn pwn30<'r>(_key : String) -> Response<'r> { index() }
+#[get("/pwn21/<_key>")]
+fn pwn21<'r>(_key : String) -> Response<'r> { index() }
+#[get("/pwn20/<_key>")]
+fn pwn20<'r>(_key : String) -> Response<'r> { index() }
+#[get("/pwn171/<_key>")]
+fn pwn171<'r>(_key : String) -> Response<'r> { index() }
+#[get("/pwn17/<_key>")]
+fn pwn17<'r>(_key : String) -> Response<'r> { index() }
+#[get("/pwn16/<_key>")]
+fn pwn16<'r>(_key : String) -> Response<'r> { index() }
 
 #[get("/")]
 fn index<'r>() -> Response<'r> {
@@ -170,7 +248,10 @@ fn main() {
                     rocket::ignite()
                         .manage(state)
                         .mount("/", routes![index, synset,
-                                autocomplete_lemma, get_static]).launch();
+                                autocomplete_lemma, get_static,
+                                lemma, id, ili, sense_key, 
+                                pwn30, pwn21, pwn20, pwn17,
+                                pwn171, pwn16]).launch();
                 },
                 Err(msg) => {
                     eprintln!("{}", msg);

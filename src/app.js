@@ -1,33 +1,49 @@
-angular.module('app', ['ngMaterial']);
+angular.module('app', ['ngMaterial'])
+    .config(function($locationProvider) {
+        $locationProvider.html5Mode(true);
+    });
+
 
 angular.module('app').component('wordnet', {
     templateUrl: 'static/wordnet.html',
     controller: function($scope) {
         $scope.synsets = [];
+        $scope.focus = "";
         $scope.display = {
             show_wn31: true
         };
     }
 });
 
+
 angular.module('app').controller('SearchController',
-        function($scope, $http) {
+        function($scope, $http, $location) {
     var self = this;
+    self.index = 'lemma';
+    var m = $location.path().match("/(.*)/(.*)");
     self.selectedItemChange = function(item) {
         if(item) {
-            $http.get("/json/lemma/"+item.item).then(
+            $location.path("/"+ self.index + "/"+item.item);
+            $scope.$parent.focus = item.item;
+            $http.get("/json/"+ self.index + "/"+item.item).then(
                 function(result) {
                     $scope.$parent.synsets = result.data;
                 }, function(response) {
                     console.log(response.data);
                 });
         } else {
+            $scope.$parent.focus = "";
             $scope.$parent.synsets = [];
         }
     };
 
+    if(m) {
+        self.index = m[1];
+        self.selectedItem = { item: m[2], display: m[2] };
+        self.selectedItemChange(self.selectedItem);
+    }
     self.querySearch = function (query) {
-        return $http.get("/autocomplete/lemma/"+ query).then(
+        return $http.get("/autocomplete/"+ self.index + "/"+ query).then(
             function(result) {
                 return result.data;
             }, function(response) {
@@ -40,7 +56,23 @@ angular.module('app').component('synset', {
         templateUrl: '/static/synset.html',
         bindings: {
             synset: '=',
-            display: '<'
+            display: '<',
+            focus: '='
+        },
+        controller: function() {
+            var ctrl = this;
+            ctrl.hasSubcats = function() {
+                console.log("hasSubcats");
+                for(i = 0; i < this.synset.lemmas.length; i++) {
+                    if(this.synset.lemmas[i].subcats.length > 0) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            ctrl.underlineSubcat = function(subcat, lemma) {
+                return subcat.replace('%s', '<span class="underline">' + lemma + '</span>');
+            };
         }
     });
 
@@ -48,12 +80,13 @@ angular.module('app').component('synset2', {
     templateUrl: '/static/synset.html',
     bindings: {
         target: '<',
-        display: '<'
+        display: '<',
+        focus: '='
     },
     controller: function($http) {
         var ctrl = this;
         ctrl.synset = {};
-        $http.get("/json/wn31/" + ctrl.target).then(
+        $http.get("/json/id/" + ctrl.target).then(
             function(response) {
                 ctrl.synset = response.data[0];
             },
@@ -70,13 +103,16 @@ angular.module('app').component('relation', {
             relation: '@',
             relations: '=',
             display: '<'
-//        },
+        },
+        controller: function() {
+            this.show = false;
+        }
 //        controller: function($scope,$http) {
 //            console.log("Loading synsets");
 //            for(r = 0; r < this.relations.length; r++) {
 //                var relation = this.relations[r];
 //                console.log(relation);
-//                $http.get("/json/wn31/" + relation.target).then(
+//                $http.get("/json/id/" + relation.target).then(
 //                    function(response) {
 //                        console.log(response.data);
 //                        relation.synset = response.data[0];
@@ -86,7 +122,7 @@ angular.module('app').component('relation', {
 //                        console.log(response.data);
 //                    });
 //            }
-        }
+//        }
 
     });
 

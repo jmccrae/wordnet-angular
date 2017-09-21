@@ -8,11 +8,11 @@
     <div class="lemmas">
         <span class="pos">({{$ctrl.synset.pos}})</span>
         <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
-            <span ng-bind="sense.lemma"></span>
+            <a ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-show="!$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
             <span class="forms" ng-show="$ctrl.display.forms">
                 <span class="form" ng-repeat="form in sense.forms">{{form}}</span>
             </span>
-            <span ng-bind="sense.sense_key" class="sense_key" ng-show="$ctrl.display.sensekeys"></span>
+            <span ng-bind="sense.sense_key" class="sense_key" ng-show="$ctrl.display.sensekeys"></span><span ng-show="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
         </span>
         </span>
         <span ng-bind="$ctrl.synset.definition" class="definition"></span>
@@ -20,12 +20,22 @@
             <b>Topic: </b> {{$ctrl.synset.subject}}
         </div>
         <div ng-show="$ctrl.display.subcats" class="subcats">
-            <b>Subcategorization Frames:</b>
-            <ul ng-repeat="sense in $ctrl.synset.lemmas">
+            <b ng-show="$ctrl.hasSubcats()">Subcategorization Frames:</b>
+            <ul ng-repeat="sense in $ctrl.synset.lemmas" ng-show="$ctrl.hasSubcats()">
             <li class="subcat" ng-repeat="subcat in sense.subcats">{{subcat.replace('%s', sense.lemma)}}</span>
             </ul>
         </div>
-        <span ng-if="$ctrl.show_relations">
+        <ul ng-show="$ctrl.display.wn30 || $ctrl.display.wn_old" class="old_ids">
+            <li ng-show="$ctrl.display.wn30" ng-repeat="id in $ctrl.synset.old_keys.pwn30">WordNet 3.0: {{id}}</li>
+            <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn21">WordNet 2.1: {{id}}</li>
+            <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn20">WordNet 2.0: {{id}}</li>
+            <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn171">WordNet 1.7.1: {{id}}</li>
+            <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn17">WordNet 1.7: {{id}}</li>
+            <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn16">WordNet 1.6: {{id}}</li>
+            <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn15">WordNet 1.5: {{id}}</li>
+        </ul>
+
+        <div ng-if="$ctrl.show_relations" class="relations">
             <relation display="$ctrl.display"
                 fullname="Hypernyms"
                 relation="hypernym"
@@ -115,7 +125,7 @@
                 relations="$ctrl.synset.relations"
                 fullname="Verb groups"></relation>
 
-        </span>
+        </div>
 
         <div class="more">
             <a href="#"

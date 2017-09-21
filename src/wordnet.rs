@@ -1,10 +1,11 @@
 use std::fs::File;
 use std::path::Path;
-use std::io::BufReader;
+use std::io::{BufRead,BufReader};
 use xml::reader::{EventReader, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
 use stable_skiplist::OrderedSkipList;
+use glosstag::{Gloss,read_glosstag_corpus};
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Synset {
@@ -14,7 +15,9 @@ pub struct Synset {
     pub ili : String,
     pub pos : String,
     pub subject : String,
-    pub relations : Vec<Relation>
+    pub relations : Vec<Relation>,
+    pub old_keys : HashMap<String, Vec<String>>,
+    pub gloss : Option<Vec<Gloss>>
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -37,13 +40,21 @@ pub struct WordNet {
     pub synsets : HashMap<String, Synset>,
     pub by_lemma : HashMap<String, Vec<String>>,
     pub by_ili : HashMap<String, String>,
+    pub by_sense_key : HashMap<String, String>,
+    pub by_old_id : HashMap<String, HashMap<String, String>>,
     pub id_skiplist : OrderedSkipList<String>,
     pub lemma_skiplist : OrderedSkipList<String>,
-    pub ili_skiplist : OrderedSkipList<String>
+    pub ili_skiplist : OrderedSkipList<String>,
+    pub sense_key_skiplist : OrderedSkipList<String>,
+    pub old_skiplist : HashMap<String, OrderedSkipList<String>>
 }
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
     attr.iter().find(|a| a.name.local_name == name).map(|a| a.value.clone())
+}
+
+fn clean_id(s : &str) -> String {
+    s.chars().skip(5).collect()
 }
 
 impl WordNet {
@@ -111,9 +122,9 @@ impl WordNet {
                                     "Lemma outside of LexicalEntry"))
                             }
                          };
-                         let target = attr_value(&attributes, "synset")
+                         let target = clean_id(&attr_value(&attributes, "synset")
                             .ok_or_else(|| WordNetLoadError::Schema(
-                                    "Sense does not have a synset"))?;
+                                    "Sense does not have a synset"))?);
                          match attr_value(&attributes, "identifier") {
                             Some(i) => {
                                 sense_keys.entry(entry_id.clone())
@@ -166,9 +177,9 @@ impl WordNet {
                             .or_insert_with(|| Vec::new())
                             .push(subcat);
                     } else if name.local_name == "Synset" {
-                        synset_id = Some(attr_value(&attributes, "id")
+                        synset_id = Some(clean_id(&attr_value(&attributes, "id")
                             .ok_or_else(|| WordNetLoadError::Schema(
-                                    "Synset does not have an id"))?);
+                                    "Synset does not have an id"))?));
                         synset_ili_pos_subject = Some((
                             attr_value(&attributes, "ili")
                             .ok_or_else(|| WordNetLoadError::Schema(
@@ -185,9 +196,9 @@ impl WordNet {
                         let typ = attr_value(&attributes, "relType")
                             .ok_or_else(|| WordNetLoadError::Schema(
                                 "SynsetRelation without relType"))?;
-                        let targ = attr_value(&attributes, "target")
+                        let targ = clean_id(&attr_value(&attributes, "target")
                             .ok_or_else(|| WordNetLoadError::Schema(
-                                "SynsetRelation without target"))?;
+                                "SynsetRelation without target"))?);
                         let ss = synset_id.clone()
                             .ok_or_else(|| WordNetLoadError::Schema(
                                 "SynsetRelation outside of Sense"))?;
@@ -258,7 +269,9 @@ impl WordNet {
                                 ili: ili,
                                 pos: pos,
                                 subject: subject,
-                                relations: rels
+                                relations: rels,
+                                old_keys: HashMap::new(),
+                                gloss: None
                             });
                             
                         synset_id = None;
@@ -280,14 +293,74 @@ impl WordNet {
             synsets: synsets,
             by_lemma: HashMap::new(),
             by_ili: HashMap::new(),
+            by_sense_key: HashMap::new(),
+            by_old_id: HashMap::new(),
             lemma_skiplist: lemma_skiplist,
             ili_skiplist: OrderedSkipList::new(),
-            id_skiplist: OrderedSkipList::new()
+            id_skiplist: OrderedSkipList::new(),
+            sense_key_skiplist: OrderedSkipList::new(),
+            old_skiplist: HashMap::new()
         };
         build_indexes(&mut wordnet);
+        build_tabs(&mut wordnet)?;
+        build_glosstags(&mut wordnet)?;
         Ok(wordnet)
     }
 }
+
+fn build_glosstags(wordnet : &mut WordNet)
+         -> Result<(), WordNetLoadError> {
+    let ref wn30_idx = wordnet.by_old_id["pwn30"];
+    let ref sense_keys = wordnet.by_sense_key;
+    let mut result = read_glosstag_corpus("data/merged/adj.xml", wn30_idx, sense_keys)?;
+    result.extend(read_glosstag_corpus("data/merged/adv.xml", wn30_idx, sense_keys)?);
+    result.extend(read_glosstag_corpus("data/merged/noun.xml", wn30_idx, sense_keys)?);
+    result.extend(read_glosstag_corpus("data/merged/verb.xml", wn30_idx, sense_keys)?);
+    for (k,v) in result.iter() {
+        wordnet.synsets.get_mut(k)
+            .map(|x| {
+                x.gloss = Some(v.clone())
+            });
+    }
+    Ok(())
+}
+
+fn build_tab<P : AsRef<Path>>(file : P, 
+    index : &str,
+    by_ili : &HashMap<String, String>,
+    synsets : &mut HashMap<String, Synset>,
+    by_tab : &mut HashMap<String, String>,
+    skiplist : &mut OrderedSkipList<String>) -> Result<(),::std::io::Error> {
+    let file = BufReader::new(File::open(file)?);
+    for line in file.lines() {
+        let line = line?;
+        let mut elems = line.split("\t");
+        match elems.next() {
+            Some(ili) => {
+                match elems.next() {
+                    Some(id) => {
+                        skiplist.insert(id.to_string());
+                        match by_ili.get(ili) {
+                            Some(wnid) => {
+                                by_tab.insert(id.to_string(), wnid.to_string());
+                                synsets.entry(wnid.clone())
+                                    .or_insert_with(|| panic!("ILI not in WordNet??"))
+                                    .old_keys.entry(index.to_string())
+                                    .or_insert_with(|| Vec::new())
+                                    .push(id.to_string());
+                            },
+                            None => {}
+                        };
+                    },
+                    None => {}
+                }
+            },
+            None => {}
+        }
+    }
+    Ok(())
+}
+    
 
 fn build_indexes(wordnet : &mut WordNet) {
     for (id, synset) in wordnet.synsets.iter() {
@@ -295,12 +368,27 @@ fn build_indexes(wordnet : &mut WordNet) {
         wordnet.id_skiplist.insert(id.clone());
         wordnet.by_ili.insert(synset.ili.clone(), id.clone());
         for sense in synset.lemmas.iter() {
+            wordnet.by_sense_key.insert(sense.sense_key.clone(), id.clone());
+            wordnet.sense_key_skiplist.insert(sense.sense_key.clone());
             wordnet.by_lemma.entry(sense.lemma.clone())
                 .or_insert_with(|| Vec::new())
                 .push(id.clone());
         }
-
     }
+}
+
+fn build_tabs(wordnet : &mut WordNet) -> Result<(),::std::io::Error> {
+    for tab in ["pwn15", "pwn16", "pwn17", "pwn171", "pwn20",
+                "pwn21", "pwn30"].iter() {
+        let mut map = HashMap::new();
+        let mut list = OrderedSkipList::new();
+        let path = format!("data/ili-map-{}.tab", tab);
+        build_tab(path, tab, &wordnet.by_ili, 
+            &mut wordnet.synsets, &mut map, &mut list)?;
+        wordnet.by_old_id.insert(tab.to_string(), map);
+        wordnet.old_skiplist.insert(tab.to_string(), list);
+    }
+    Ok(())
 }
 
 quick_error! {

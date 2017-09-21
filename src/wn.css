@@ -1,11 +1,11 @@
+
 body {
     font-family: 'Libre Franklin', sans-serif;
 }
 
 .synset {
-    border: 1px solid rgba(0,0,0,.21);
-    padding: 40px;
-    margin: 20px;
+    padding-left:15px;
+    padding-bottom:10px;
 }
 
 .lemmas {
@@ -32,7 +32,7 @@ body {
 
 .sense_key {
     color: #aaa;
-    font-family: 'Cousine', monospace;
+    font-family: 'Scope One', monospace;
 }
 
 .synset-id {
@@ -56,4 +56,46 @@ body {
 
 .more:hover {
     text-decoration: underline;
+}
+
+.relations {
+    padding-left:30px;
+}
+
+.relation-word {
+    padding-left:30px;
+}
+
+.pos {
+    color: firebrick;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.synset-id hr {
+    margin-top:2px;
+    margin-bottom:2px;
+}
+
+.relation-title a {
+    text-decoration:none;
+    color:black;
+}
+
+.relation-title a:hover {
+    text-decoration: underline;
+}
+
+.lemma a {
+    color:black;
+}
+
+.topic {
+    margin-left:25px;
+}
+
+.subcats {
+    margin-left:25px;
 }

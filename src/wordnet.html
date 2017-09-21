@@ -1,5 +1,26 @@
 <div class="row">
     <div ng-controller="SearchController as ctrl" layout="column" ng-cloak="">
+        <table width="100%">
+            <tr>
+                <td width="100px;">
+        <md-menu>
+        <button class="md-button" ng-click="$mdMenu.open()" class="md-icon-button">{{ctrl.index}}</button>
+            <md-menu-content>
+                <md-menu-item><md-button ng-click="ctrl.index = 'lemma'">Lemma</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'id'">Identifier</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'ili'">Interlingual Identifier</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'sense_key'">Sense Key</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'pwn30'">WordNet 3.0</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'pwn21'">WordNet 2.1</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'pwn20'">WordNet 2.0</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'pwn171'">WordNet 1.7.1</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'pwn17'">WordNet 1.7</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'pwn16'">WordNet 1.6</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'pwn15'">WordNet 1.5</md-button></md-menu-item>
+            </md-menu-content>
+        </md-menu>
+                </td>
+                <td>
         <md-content class="md-padding">
             <md-autocomplete
                 md-dropdown-items="10"
@@ -19,28 +40,33 @@
                 </md-not-found>
             </md-autocomplete>
         </md-content>
+            </td>
+        </tr>
+    </table>
     </div>
     <div>
         <md-checkbox ng-model="display.ids">Show Synset Identifier</md-checkbox>
         <md-checkbox ng-model="display.sensekeys">Show Sense Keys</md-checkbox>
         <md-checkbox ng-model="display.subcats">Show Subcategorization Frames</md-checkbox>
         <md-checkbox ng-model="display.topics">Show Topics</md-checkbox>
+        <md-checkbox ng-model="display.wn30">Show WordNet 3.0 Identifer</md-checkbox>
+        <md-checkbox ng-model="display.wn_old">Show Previous WordNet Identifiers</md-checkbox>
     </div>
-    <h3 ng-show="(synsets|filter:{'pos':'n'}).length > 0">Nouns</h3>
+    <!--    <h3 ng-show="(synsets|filter:{'pos':'n'}).length > 0">Nouns</h3>-->
     <div ng-repeat="synset in synsets | filter:{'pos':'n'}">
-        <synset synset="synset" display="display"></synset>
+        <synset synset="synset" display="display" focus="focus"></synset>
     </div>
-    <h3 ng-show="(synsets|filter:{'pos':'v'}).length > 0">Verbs</h3>
+    <!--    <h3 ng-show="(synsets|filter:{'pos':'v'}).length > 0">Verbs</h3>-->
     <div ng-repeat="synset in synsets | filter:{'pos':'v'}">
-        <synset synset="synset" display="display"></synset>
+        <synset synset="synset" display="display" focus="focus"></synset>
     </div>
-    <h3 ng-show="(synsets|filter:{'pos':'r'}).length > 0">Adverbs</h3>
+    <!--<h3 ng-show="(synsets|filter:{'pos':'r'}).length > 0">Adverbs</h3>-->
     <div ng-repeat="synset in synsets | filter:{'pos':'r'}">
-        <synset synset="synset" display="display"></synset>
+        <synset synset="synset" display="display" focus="focus"></synset>
     </div>
-    <h3 ng-show="(synsets|isAdjective).length > 0">Adjectives</h3>
+    <!--<h3 ng-show="(synsets|isAdjective).length > 0">Adjectives</h3>-->
     <div ng-repeat="synset in synsets | isAdjective">
-        <synset synset="synset" display="display"></synset>
+        <synset synset="synset" display="display" focus="focus"></synset>
     </div>
 </div>
 
