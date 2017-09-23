@@ -7,15 +7,17 @@ extern crate xml;
 #[macro_use]
 extern crate quick_error;
 extern crate clap;
-//extern crate serde;
+extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
 mod wordnet;
 mod glosstag;
+mod omwn;
 
-use wordnet::WordNet;
+use std::str::FromStr;
+use wordnet::{WNKey, WordNet};
 use clap::{App, Arg, ArgMatches};
 use std::process::exit;
 use rocket::State;
@@ -66,7 +68,8 @@ fn synset<'r>(index : String, id : String,
               status : State<WordNetState>) 
         -> Result<Response<'r>,&'static str> {
     let synsets = (if index == "id" {
-        status.wordnet.synsets.get(&id)
+        status.wordnet.synsets.get(&WNKey::from_str(&id)
+                .map_err(|_| "Not a WordNet ID")?)
             .ok_or_else(|| "Synset Not Found")
             .map(|x| vec![x.clone()])
     } else if index == "lemma" {
@@ -98,7 +101,8 @@ fn synset<'r>(index : String, id : String,
                     .clone()]
             })
      } else if status.wordnet.by_old_id.contains_key(&index) {
-        status.wordnet.by_old_id[&index].get(&id)
+        status.wordnet.by_old_id[&index].get(&WNKey::from_str(&id)
+                .map_err(|_| "Not a WordNet Key")?)
             .ok_or_else(|| "Synset Not Found")
             .map(|x| {
                 vec![status.wordnet.synsets.get(x)
@@ -121,9 +125,43 @@ struct AutocompleteResult {
     item: String
 }
 
+fn autocomplete_wn_key(k : &str) -> Result<WNKey, &'static str> {
+    if k.len() <= 10 {
+        let mut k2 = String::from(k);
+        k2.push_str(&"00000000-n"[k.len()..]);
+        WNKey::from_str(&k2)
+            .map_err(|_| "Not a WordNet ID")
+    } else {
+        Err("Not a WordNet ID")
+    }
+    //if k.len() <= 8 {
+    //    let mut k2 = String::from(k);
+    //    for _ in k.len()..8 {
+    //        k2.push_str("0");
+    //    }
+    //   Ok(WNKey::new(u32::from_str(&k2)
+    //            .map_err(|_| "Not a WordNet ID")?, 'n')
+    //        .map_err(|_| "Not a WordNet ID")?)
+    //} else if k.len() == 9 {
+    //    let k2 : String = k.chars().take(8).collect();
+    //   Ok(WNKey::new(u32::from_str(&k2)
+    //            .map_err(|_| "Not a WordNet ID")?, 'n')
+    //        .map_err(|_| "Not a WordNet ID")?)
+    //} else if k.len() == 10 {
+    //    let k2 : String = k.chars().take(8).collect();
+    //    let pos = k.chars().skip(9).next()
+    //        .ok_or_else(|| "Not a WordNet ID")?;
+    //   Ok(WNKey::new(u32::from_str(&k2)
+    //            .map_err(|_| "Not a WordNet ID")?, pos)
+    //        .map_err(|_| "Not a WordNet ID")?)
+    //} else {
+    //    Err("Not a WordNet ID")
+    //}
+}
+
 #[get("/autocomplete/<index>/<key>")]
 fn autocomplete_lemma(index : String, key : String, 
-        state : State<WordNetState>) -> serde_json::Result<String> {
+        state : State<WordNetState>) -> Result<String, &'static str> {
     let mut results = Vec::new();
     if index == "lemma" {
         for s in state.wordnet.lemma_skiplist.range(Included(&key), Unbounded).take(10) {
@@ -135,8 +173,9 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
     } else if index == "id" {
-        for s in state.wordnet.id_skiplist.range(Included(&key), Unbounded).take(10) {
-            if s.starts_with(&key) {
+        let key2 = autocomplete_wn_key(&key)?;
+        for s in state.wordnet.id_skiplist.range(Included(&key2), Unbounded).take(10) {
+            if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
                     item: s.to_string()
@@ -162,8 +201,9 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
      } else if state.wordnet.old_skiplist.contains_key(&index) {
-        for s in state.wordnet.old_skiplist[&index].range(Included(&key), Unbounded).take(10) {
-            if s.starts_with(&key) {
+        let key2 = autocomplete_wn_key(&key)?;
+        for s in state.wordnet.old_skiplist[&index].range(Included(&key2), Unbounded).take(10) {
+            if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
                     item: s.to_string()
@@ -171,7 +211,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
 }
-    serde_json::to_string(&results)
+    serde_json::to_string(&results).map_err(|_| "Could not translate to JSON")
 }
 
 #[get("/lemma/<_key>")]

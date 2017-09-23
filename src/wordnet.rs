@@ -1,22 +1,122 @@
-use std::fs::File;
-use std::path::Path;
-use std::io::{BufRead,BufReader};
-use xml::reader::{EventReader, XmlEvent};
-use xml::attribute::OwnedAttribute;
-use std::collections::HashMap;
-use stable_skiplist::OrderedSkipList;
+//! Functions for handling the in-memory model of WordNet and loading it form
+//! disk
 use glosstag::{Gloss,read_glosstag_corpus};
+use omwn::load_omwn;
+use serde::de::{Visitor, Deserializer, Error as DeError};
+use serde::{Serialize, Serializer,Deserialize};
+use stable_skiplist::OrderedSkipList;
+use std::collections::HashMap;
+use std::fmt::{Formatter, Result as FormatResult};
+use std::fs::File;
+use std::io::{BufRead,BufReader};
+use std::path::Path;
+use std::str::FromStr;
+use xml::attribute::OwnedAttribute;
+use xml::reader::{EventReader, XmlEvent};
+
+/// A WordNet Key consisting of 8 digits and a part of speech.
+/// This data structure stores the value as a 4-byte integer to save memory
+#[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd)]
+pub struct WNKey(u32);
+
+impl WNKey {
+    /// Create from an ID and a part of speech
+    pub fn new(id : u32, pos : char) -> Result<WNKey, WordNetLoadError> {
+        match pos {
+            'n' => Ok(WNKey((id << 8) + 1)),
+            'v' => Ok(WNKey((id << 8) + 2)),
+            'a' => Ok(WNKey((id << 8) + 3)),
+            'r' => Ok(WNKey((id << 8) + 4)),
+            's' => Ok(WNKey((id << 8) + 5)),
+            'p' => Ok(WNKey((id << 8) + 6)),
+            'x' => Ok(WNKey((id << 8) + 7)),
+            _ => Err(WordNetLoadError::BadKey(format!("Bad WN POS: {}", pos)))
+        }
+    }
+        
+}
+
+impl FromStr  for WNKey {
+    type Err = WordNetLoadError;
+    fn from_str(s : &str) -> Result<WNKey, WordNetLoadError> { 
+        if s.len() != 10 {
+            Err(WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))
+        } else {
+            let num = u32::from_str(&s.chars().take(8).collect::<String>())
+                .map_err(|_| WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))? << 8;
+            match s.chars().skip(9).next() {
+                Some('n') => Ok(WNKey(0x00000001 | num)),
+                Some('v') => Ok(WNKey(0x00000002 | num)),
+                Some('a') => Ok(WNKey(0x00000003 | num)),
+                Some('r') => Ok(WNKey(0x00000004 | num)),
+                Some('s') => Ok(WNKey(0x00000005 | num)),
+                Some('p') => Ok(WNKey(0x00000006 | num)),
+                Some('x') => Ok(WNKey(0x00000007 | num)),
+                _ => Err(WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))
+            }
+        }
+    }
+}
+
+impl ToString for WNKey {
+    fn to_string(&self) -> String { 
+        match self.0 & 0x0000000f {
+            1 => format!("{:08}-n", (self.0 & 0xfffffff0) >> 8),
+            2 => format!("{:08}-v", (self.0 & 0xfffffff0) >> 8),
+            3 => format!("{:08}-a", (self.0 & 0xfffffff0) >> 8),
+            4 => format!("{:08}-r", (self.0 & 0xfffffff0) >> 8),
+            5 => format!("{:08}-s", (self.0 & 0xfffffff0) >> 8),
+            6 => format!("{:08}-p", (self.0 & 0xfffffff0) >> 8),
+            7 => format!("{:08}-x", (self.0 & 0xfffffff0) >> 8),
+            _ => format!("{:08}-?", (self.0 & 0xfffffff0) >> 8)
+        }
+    }
+}
+
+impl Serialize for WNKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for WNKey {
+    fn deserialize<D>(deserializer: D) -> Result<WNKey, D::Error>
+        where D: Deserializer<'de> {
+        deserializer.deserialize_str(WNKeyVisitor)        
+    }
+}
+
+struct WNKeyVisitor;
+
+impl<'de> Visitor<'de> for WNKeyVisitor {
+    type Value = WNKey;
+
+    fn expecting(&self, formatter : &mut Formatter) -> FormatResult {
+        formatter.write_str("A WordNet key such as 00001740-a")
+    }
+
+    fn visit_str<E>(self, value : &str) -> Result<WNKey, E>  where E : DeError {
+        WNKey::from_str(value)
+            .map_err(|e| E::custom(e))
+    }
+
+    fn visit_string<E>(self, value : String) -> Result<WNKey, E> where E : DeError {
+        WNKey::from_str(&value)
+            .map_err(|e| E::custom(e))
+    }
+}
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Synset {
     pub definition : String,
     pub lemmas : Vec<Sense>,
-    pub id : String,
+    pub id : WNKey,
     pub ili : String,
     pub pos : String,
     pub subject : String,
     pub relations : Vec<Relation>,
-    pub old_keys : HashMap<String, Vec<String>>,
+    pub old_keys : HashMap<String, Vec<WNKey>>,
     pub gloss : Option<Vec<Gloss>>
 }
 
@@ -37,24 +137,25 @@ pub struct Relation {
 }
 
 pub struct WordNet {
-    pub synsets : HashMap<String, Synset>,
-    pub by_lemma : HashMap<String, Vec<String>>,
-    pub by_ili : HashMap<String, String>,
-    pub by_sense_key : HashMap<String, String>,
-    pub by_old_id : HashMap<String, HashMap<String, String>>,
-    pub id_skiplist : OrderedSkipList<String>,
+    pub synsets : HashMap<WNKey, Synset>,
+    pub by_lemma : HashMap<String, Vec<WNKey>>,
+    pub by_ili : HashMap<String, WNKey>,
+    pub by_sense_key : HashMap<String, WNKey>,
+    pub by_old_id : HashMap<String, HashMap<WNKey, WNKey>>,
+    pub id_skiplist : OrderedSkipList<WNKey>,
     pub lemma_skiplist : OrderedSkipList<String>,
     pub ili_skiplist : OrderedSkipList<String>,
     pub sense_key_skiplist : OrderedSkipList<String>,
-    pub old_skiplist : HashMap<String, OrderedSkipList<String>>
+    pub old_skiplist : HashMap<String, OrderedSkipList<WNKey>>
 }
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
     attr.iter().find(|a| a.name.local_name == name).map(|a| a.value.clone())
 }
 
-fn clean_id(s : &str) -> String {
-    s.chars().skip(5).collect()
+fn clean_id(s : &str) -> Result<WNKey, WordNetLoadError> {
+    let s2 : String = s.chars().skip(5).collect();
+    WNKey::from_str(&s2)
 }
 
 impl WordNet {
@@ -77,7 +178,7 @@ impl WordNet {
         let mut in_def = false;
         let mut definition = None;
         let mut synsets = HashMap::new();
-        let mut relations = HashMap::new();
+        let mut relations : HashMap<WNKey,Vec<Relation>> = HashMap::new();
 
         let mut lemma_skiplist = OrderedSkipList::new();
 
@@ -124,7 +225,7 @@ impl WordNet {
                          };
                          let target = clean_id(&attr_value(&attributes, "synset")
                             .ok_or_else(|| WordNetLoadError::Schema(
-                                    "Sense does not have a synset"))?);
+                                    "Sense does not have a synset"))?)?;
                          match attr_value(&attributes, "identifier") {
                             Some(i) => {
                                 sense_keys.entry(entry_id.clone())
@@ -179,7 +280,7 @@ impl WordNet {
                     } else if name.local_name == "Synset" {
                         synset_id = Some(clean_id(&attr_value(&attributes, "id")
                             .ok_or_else(|| WordNetLoadError::Schema(
-                                    "Synset does not have an id"))?));
+                                    "Synset does not have an id"))?)?);
                         synset_ili_pos_subject = Some((
                             attr_value(&attributes, "ili")
                             .ok_or_else(|| WordNetLoadError::Schema(
@@ -198,7 +299,7 @@ impl WordNet {
                                 "SynsetRelation without relType"))?;
                         let targ = clean_id(&attr_value(&attributes, "target")
                             .ok_or_else(|| WordNetLoadError::Schema(
-                                "SynsetRelation without target"))?);
+                                "SynsetRelation without target"))?)?;
                         let ss = synset_id.clone()
                             .ok_or_else(|| WordNetLoadError::Schema(
                                 "SynsetRelation outside of Sense"))?;
@@ -208,7 +309,7 @@ impl WordNet {
                                 src_word: None,
                                 trg_word: None,
                                 rel_type: typ,
-                                target: targ
+                                target: targ.to_string()
                             });
     }
                 },
@@ -254,7 +355,7 @@ impl WordNet {
                                         src_word: r.src_word.clone(),
                                         trg_word: Some(sense_to_lemma[&r.target].clone()),
                                         rel_type: r.rel_type.clone(),
-                                        target: sense_to_synset[&r.target].clone()
+                                        target: sense_to_synset[&r.target].to_string()
                                     }
                                 } else {
                                     r.clone()
@@ -304,6 +405,17 @@ impl WordNet {
         build_indexes(&mut wordnet);
         build_tabs(&mut wordnet)?;
         build_glosstags(&mut wordnet)?;
+        //eprintln!("size_of synsets: {}", wordnet.synsets.len());
+        //eprintln!("size_of by_lemma: {}", wordnet. by_lemma.len());
+        //eprintln!("size_of by_ili: {}", wordnet.by_ili.len());
+        //eprintln!("size_of by_sense_key: {}", wordnet.by_sense_key.len());
+        //eprintln!("size_of by_old_id: {}", wordnet.by_old_id.len());
+        //eprintln!("size_of id_skiplist: {}", wordnet.id_skiplist.len());
+        //eprintln!("size_of lemma_skiplist: {}", wordnet.lemma_skiplist.len());
+        //eprintln!("size_of ili_skiplist: {}", wordnet.ili_skiplist.len());
+        //eprintln!("size_of sense_key_skiplist: {}", wordnet.sense_key_skiplist.len());
+        //eprintln!("size_of old_skiplist: {}", wordnet.old_skiplist.len());
+
         Ok(wordnet)
     }
 }
@@ -327,10 +439,10 @@ fn build_glosstags(wordnet : &mut WordNet)
 
 fn build_tab<P : AsRef<Path>>(file : P, 
     index : &str,
-    by_ili : &HashMap<String, String>,
-    synsets : &mut HashMap<String, Synset>,
-    by_tab : &mut HashMap<String, String>,
-    skiplist : &mut OrderedSkipList<String>) -> Result<(),::std::io::Error> {
+    by_ili : &HashMap<String, WNKey>,
+    synsets : &mut HashMap<WNKey, Synset>,
+    by_tab : &mut HashMap<WNKey, WNKey>,
+    skiplist : &mut OrderedSkipList<WNKey>) -> Result<(),WordNetLoadError> {
     let file = BufReader::new(File::open(file)?);
     for line in file.lines() {
         let line = line?;
@@ -339,15 +451,15 @@ fn build_tab<P : AsRef<Path>>(file : P,
             Some(ili) => {
                 match elems.next() {
                     Some(id) => {
-                        skiplist.insert(id.to_string());
+                        skiplist.insert(WNKey::from_str(id)?);
                         match by_ili.get(ili) {
                             Some(wnid) => {
-                                by_tab.insert(id.to_string(), wnid.to_string());
+                                by_tab.insert(WNKey::from_str(id)?, wnid.clone());
                                 synsets.entry(wnid.clone())
                                     .or_insert_with(|| panic!("ILI not in WordNet??"))
                                     .old_keys.entry(index.to_string())
                                     .or_insert_with(|| Vec::new())
-                                    .push(id.to_string());
+                                    .push(WNKey::from_str(id)?);
                             },
                             None => {}
                         };
@@ -377,7 +489,7 @@ fn build_indexes(wordnet : &mut WordNet) {
     }
 }
 
-fn build_tabs(wordnet : &mut WordNet) -> Result<(),::std::io::Error> {
+fn build_tabs(wordnet : &mut WordNet) -> Result<(),WordNetLoadError> {
     for tab in ["pwn15", "pwn16", "pwn17", "pwn171", "pwn20",
                 "pwn21", "pwn30"].iter() {
         let mut map = HashMap::new();
@@ -403,6 +515,9 @@ quick_error! {
             cause(err)
         }
         Schema(msg : &'static str) {
+            description(msg)
+        }
+        BadKey(msg : String) {
             description(msg)
         }
     }

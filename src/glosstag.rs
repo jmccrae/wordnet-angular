@@ -4,7 +4,8 @@ use std::io::{BufReader};
 use xml::reader::{EventReader, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
-use wordnet::WordNetLoadError;
+use wordnet::{WNKey, WordNetLoadError};
+use std::str::FromStr;
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct GlossTagWord {
@@ -27,7 +28,7 @@ pub struct Gloss {
     gloss_type : GlossType
 }
 
-pub type GlossTagCorpus = HashMap<String, Vec<Gloss>>;
+pub type GlossTagCorpus = HashMap<WNKey, Vec<Gloss>>;
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
     attr.iter().find(|a| a.name.local_name == name).map(|a| a.value.clone())
@@ -35,13 +36,13 @@ fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String
 
 
 pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
-        wn30_idx : &HashMap<String, String>,
-        sense_keys: &HashMap<String, String>) -> Result<GlossTagCorpus, WordNetLoadError> {
+        wn30_idx : &HashMap<WNKey, WNKey>,
+        sense_keys: &HashMap<String, WNKey>) -> Result<GlossTagCorpus, WordNetLoadError> {
     let file = BufReader::new(File::open(path)?);
 
     let parse = EventReader::new(file);
 
-    let mut current_id : Option<String> = None;
+    let mut current_id : Option<WNKey> = None;
     let mut current_sents : Vec<Gloss> = Vec::new();
     let mut current_sent = Vec::new();
     let mut current_word = GlossTagWord { 
@@ -60,7 +61,7 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "bad wn30 id"))?;
                     let num : String = wn30id.chars().skip(1).collect();
-                    let id = format!("{}-{}", num ,pos);
+                    let id = WNKey::from_str(&format!("{}-{}", num ,pos))?;
                     current_id = wn30_idx.get(&id)
                         .map(|x| x.clone());
                 } else if name.local_name == "gloss" {
