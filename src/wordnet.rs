@@ -508,10 +508,12 @@ quick_error! {
     pub enum WordNetLoadError {
         Io(err: ::std::io::Error) { 
             from()
+            display("I/O error: {}", err)
             cause(err)
         }
         Xml(err: ::xml::reader::Error) {
             from()
+            display("XML error: {}", err)
             cause(err)
         }
         Schema(msg : &'static str) {
