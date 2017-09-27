@@ -27,6 +27,14 @@ use stable_skiplist::Bound::{Included, Unbounded};
 use std::io::Cursor;
 use std::fs::File;
 
+#[get("/flag/<code>")]
+fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
+    Ok(Response::build()
+        .header(ContentType::GIF)
+        .sized_body(File::open(&format!("flags/{}.gif", code))?)
+        .finalize())
+}
+
 #[get("/static/<name>")]
 fn get_static<'r>(name : String) -> Response<'r> {
     if name == "app.js" {
@@ -50,6 +58,11 @@ fn get_static<'r>(name : String) -> Response<'r> {
     } else if name == "relation.html" {
         Response::build()
             .sized_body(File::open("src/relation.html").unwrap())
+            .finalize()
+    } else if name == "princeton.png" {
+        Response::build()
+            .header(ContentType::PNG)
+            .sized_body(File::open("src/princeton.png").unwrap())
             .finalize()
     } else if name == "wn.css" {
         Response::build()
@@ -287,7 +300,7 @@ fn main() {
                 Ok(state) => {
                     rocket::ignite()
                         .manage(state)
-                        .mount("/", routes![index, synset,
+                        .mount("/", routes![index, synset, get_flag,
                                 autocomplete_lemma, get_static,
                                 lemma, id, ili, sense_key, 
                                 pwn30, pwn21, pwn20, pwn17,

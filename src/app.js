@@ -10,7 +10,9 @@ angular.module('app').component('wordnet', {
         $scope.synsets = [];
         $scope.focus = "";
         $scope.display = {
-            show_wn31: true
+            show_wn31: true,
+            display: false,
+            langs: false
         };
     }
 });
@@ -28,12 +30,14 @@ angular.module('app').controller('SearchController',
             $http.get("/json/"+ self.index + "/"+item.item).then(
                 function(result) {
                     $scope.$parent.synsets = result.data;
+                    $scope.$parent.link = self.index + "/" + item.item;
                 }, function(response) {
                     console.log(response.data);
                 });
         } else {
             $scope.$parent.focus = "";
             $scope.$parent.synsets = [];
+            $scope.$parent.link = "";
         }
     };
 
@@ -62,7 +66,6 @@ angular.module('app').component('synset', {
         controller: function() {
             var ctrl = this;
             ctrl.hasSubcats = function() {
-                console.log("hasSubcats");
                 for(i = 0; i < this.synset.lemmas.length; i++) {
                     if(this.synset.lemmas[i].subcats.length > 0) {
                         return true;
@@ -137,5 +140,52 @@ angular.module('app').filter('isAdjective', function() {
             }
         }
         return filtered;
+    }
+});
+
+// From https://github.com/EricWVGG/AngularSlideables
+angular.module('app')
+.directive('slideable', function () {
+    return {
+        restrict:'C',
+        compile: function (element, attr) {
+            // wrap tag
+            var contents = element.html();
+            element.html('<div class="slideable_content" style="margin:0 !important; padding:0 !important" >' + contents + '</div>');
+
+            return function postLink(scope, element, attrs) {
+                // default properties
+                attrs.duration = (!attrs.duration) ? '.3s' : attrs.duration;
+                attrs.easing = (!attrs.easing) ? 'ease-in-out' : attrs.easing;
+                element.css({
+                    'overflow': 'hidden',
+                    'height': '0px',
+                    'transitionProperty': 'height',
+                    'transitionDuration': attrs.duration,
+                    'transitionTimingFunction': attrs.easing
+                });
+            };
+        }
+    };
+})
+.directive('slideToggle', function() {
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs) {
+            var target = document.querySelector(attrs.slideToggle);
+            attrs.expanded = false;
+            element.bind('click', function() {
+                var content = target.querySelector('.slideable_content');
+                if(!attrs.expanded) {
+                    content.style.border = '1px solid rgba(0,0,0,0)';
+                    var y = content.clientHeight;
+                    content.style.border = 0;
+                    target.style.height = y + 'px';
+                } else {
+                    target.style.height = '0px';
+                }
+                attrs.expanded = !attrs.expanded;
+            });
+        }
     }
 });

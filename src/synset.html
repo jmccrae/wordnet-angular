@@ -8,14 +8,19 @@
     <div class="lemmas">
         <span class="pos">({{$ctrl.synset.pos}})</span>
         <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
-            <a ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-show="!$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
+            <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-show="!$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
             <span class="forms" ng-show="$ctrl.display.forms">
                 <span class="form" ng-repeat="form in sense.forms">{{form}}</span>
             </span>
             <span ng-bind="sense.sense_key" class="sense_key" ng-show="$ctrl.display.sensekeys"></span><span ng-show="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
         </span>
-        </span>
         <span ng-bind="$ctrl.synset.definition" class="definition"></span>
+        <div class="foreign">
+            <div ng-repeat="(lang, words) in $ctrl.synset.foreign">
+                <img ng-src="/flag/{{lang}}" ng-if="$ctrl.display['lang_'+lang]"/>
+                <span ng-repeat="word in words" ng-if="$ctrl.display['lang_'+lang]">{{word}}{{$last ? '' : ', '}}</span>
+            </div>
+        </div>
         <div ng-show="$ctrl.display.topics" class="topic">
             <b>Topic: </b> {{$ctrl.synset.subject}}
         </div>

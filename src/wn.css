@@ -1,6 +1,21 @@
 
 body {
     font-family: 'Libre Franklin', sans-serif;
+    border-top: 4px solid #e77500;
+}
+
+h1 {
+    font-family: 'Suranna', serif;
+}
+
+h3 {
+    font-family: 'Suranna', serif;
+    font-size: 30px;
+}
+
+.relation-title {
+    font-family: 'Suranna', serif;
+    font-size: 1.1em;
 }
 
 .synset {
@@ -40,7 +55,7 @@ body {
 }
 
 .identifier {
-    font-family: 'Cousine', monospace;
+    font-family: 'Scope One', monospace;
 }
 
 .more {
@@ -99,3 +114,42 @@ body {
 .subcats {
     margin-left:25px;
 }
+.pos_grp h3:only-child {
+    display:none;
+}
+
+.option_panel {
+    clear:both;
+    background-color:black;
+    color: #eee;
+}
+div.option_panel_internal {
+    padding: 10px;
+}
+
+.option_panel .md-icon {
+    border-color: #ccc !important;
+}
+
+.option_panel md-checkbox.md-checked .md-icon {
+    background-color: #e87722 !important;
+}
+
+.option_button {
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+    margin-left:0px;
+    margin-right:0px;
+    border-radius:0px;
+}
+
+.option_button_selected {
+    background-color: black;
+    color:#eee;
+}
+
+.option_button_selected:hover {
+    background-color: black !important;
+    color:#eee;
+}
+

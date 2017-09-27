@@ -9,19 +9,19 @@ fi
 
 if [ ! -f data/ili-map-pwn30.tab ]
 then
-    curl https://github.com/globalwordnet/ili/raw/master/ili-map-pwn30.tab \
+    curl -L https://github.com/globalwordnet/ili/raw/master/ili-map-pwn30.tab \
         -o data/ili-map-pwn30.tab
-    curl https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn15.tab \
+    curl -L https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn15.tab \
         -o data/ili-map-pwn15.tab
-    curl https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn16.tab \
+    curl -L https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn16.tab \
         -o data/ili-map-pwn16.tab
-    curl https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn17.tab \
+    curl -L https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn17.tab \
         -o data/ili-map-pwn17.tab
-    curl https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn171.tab \
+    curl -L https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn171.tab \
         -o data/ili-map-pwn171.tab
-    curl https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn20.tab \
+    curl -L https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn20.tab \
         -o data/ili-map-pwn20.tab
-    curl https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn21.tab \
+    curl -L https://github.com/globalwordnet/ili/raw/master/older-wn-mappings/ili-map-pwn21.tab \
         -o data/ili-map-pwn21.tab
 fi
 
@@ -34,7 +34,7 @@ then
     rm WordNet-3.0-glosstag.tar.gz
 fi
 
-if [ ! -f data/wns ]
+if [ ! -d data/wns ]
 then
     curl http://compling.hss.ntu.edu.sg/omw/all.zip -o all.zip
     unzip all.zip -d data

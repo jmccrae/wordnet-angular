@@ -45,28 +45,82 @@
     </table>
     </div>
     <div>
+        <md-button slide-toggle="#display" class="pull-right option_button" ng-click="display.display = !display.display"
+                                      ng-class="{option_button_selected: display.display}">Options  &#x25bc;</md-button>
+        <md-button slide-toggle="#langs" class="pull-right option_button" ng-click="display.langs = !display.langs"
+                                      ng-class="{option_button_selected: display.langs}">Translations   &#x25bc;</md-button>
+    </div>
+    <div id="display" class="slideable option_panel">
+       <div class="option_panel_internal">
         <md-checkbox ng-model="display.ids">Show Synset Identifier</md-checkbox>
         <md-checkbox ng-model="display.sensekeys">Show Sense Keys</md-checkbox>
         <md-checkbox ng-model="display.subcats">Show Subcategorization Frames</md-checkbox>
         <md-checkbox ng-model="display.topics">Show Topics</md-checkbox>
         <md-checkbox ng-model="display.wn30">Show WordNet 3.0 Identifer</md-checkbox>
         <md-checkbox ng-model="display.wn_old">Show Previous WordNet Identifiers</md-checkbox>
+       </div>
     </div>
-    <!--    <h3 ng-show="(synsets|filter:{'pos':'n'}).length > 0">Nouns</h3>-->
+    <div id="langs" class="slideable option_panel">
+       <div class="option_panel_internal">
+        <md-checkbox ng-model="display.lang_als"><img src="/flag/als"/> Albanian</md-checkbox>
+        <md-checkbox ng-model="display.lang_arb"><img src="/flag/arb"/> Arabic</md-checkbox>
+        <md-checkbox ng-model="display.lang_ind"><img src="/flag/ind"/> Bahasa Indonesia</md-checkbox>
+        <md-checkbox ng-model="display.lang_zsm"><img src="/flag/zsm"/> Bahasa Malay</md-checkbox>
+        <md-checkbox ng-model="display.lang_eus"><img src="/flag/eus"/> Basque</md-checkbox>
+        <md-checkbox ng-model="display.lang_bul"><img src="/flag/bul"/> Bulgarian</md-checkbox>
+        <md-checkbox ng-model="display.lang_cat"><img src="/flag/cat"/> Catalan</md-checkbox>
+        <md-checkbox ng-model="display.lang_cmn"><img src="/flag/cmn"/> Chinese (simplified)</md-checkbox>
+        <md-checkbox ng-model="display.lang_qcn"><img src="/flag/qcn"/> Chinese (traditional)</md-checkbox>
+        <md-checkbox ng-model="display.lang_hrv"><img src="/flag/hrv"/> Croatian</md-checkbox>
+        <md-checkbox ng-model="display.lang_nld"><img src="/flag/nld"/> Dutch</md-checkbox>
+        <md-checkbox ng-model="display.lang_fin"><img src="/flag/fin"/> Finnish</md-checkbox>
+        <md-checkbox ng-model="display.lang_fra"><img src="/flag/fra"/> French</md-checkbox>
+        <md-checkbox ng-model="display.lang_glg"><img src="/flag/glg"/> Galician</md-checkbox>
+        <md-checkbox ng-model="display.lang_ell"><img src="/flag/ell"/> Greek</md-checkbox>
+        <md-checkbox ng-model="display.lang_heb"><img src="/flag/heb"/> Hebrew</md-checkbox>
+        <md-checkbox ng-model="display.lang_isl"><img src="/flag/isl"/> Icelandic</md-checkbox>
+        <md-checkbox ng-model="display.lang_ita"><img src="/flag/ita"/> Italian</md-checkbox>
+        <md-checkbox ng-model="display.lang_jpn"><img src="/flag/jpn"/> Japanese</md-checkbox>
+        <md-checkbox ng-model="display.lang_lit"><img src="/flag/lit"/> Lithuanian</md-checkbox>
+        <md-checkbox ng-model="display.lang_nno"><img src="/flag/nno"/> Norwegian (Nynorsk)</md-checkbox>
+        <md-checkbox ng-model="display.lang_nob"><img src="/flag/nob"/> Norwegian (Bokm&aring;l)</md-checkbox>
+        <md-checkbox ng-model="display.lang_fas"><img src="/flag/fas"/> Persian</md-checkbox>
+        <md-checkbox ng-model="display.lang_pol"><img src="/flag/pol"/> Polish</md-checkbox>
+        <md-checkbox ng-model="display.lang_por"><img src="/flag/por"/> Portuguese</md-checkbox>
+        <md-checkbox ng-model="display.lang_ron"><img src="/flag/ron"/> Romanian</md-checkbox>
+        <md-checkbox ng-model="display.lang_slk"><img src="/flag/slk"/> Slovakian</md-checkbox>
+        <md-checkbox ng-model="display.lang_slv"><img src="/flag/slv"/> Slovene</md-checkbox>
+        <md-checkbox ng-model="display.lang_spa"><img src="/flag/spa"/> Spanish</md-checkbox>
+        <md-checkbox ng-model="display.lang_swe"><img src="/flag/swe"/> Swedish</md-checkbox>
+        <md-checkbox ng-model="display.lang_tha"><img src="/flag/tha"/> Thai</md-checkbox>
+       </div>
+    </div>
+    <span class="pos_grp">
+    <h3 class="pos_label">Nouns</h3>
     <div ng-repeat="synset in synsets | filter:{'pos':'n'}">
         <synset synset="synset" display="display" focus="focus"></synset>
     </div>
-    <!--    <h3 ng-show="(synsets|filter:{'pos':'v'}).length > 0">Verbs</h3>-->
+    </span>
+    <span class="pos_grp">
+    <h3 class="pos_label">Verbs</h3>
     <div ng-repeat="synset in synsets | filter:{'pos':'v'}">
         <synset synset="synset" display="display" focus="focus"></synset>
     </div>
-    <!--<h3 ng-show="(synsets|filter:{'pos':'r'}).length > 0">Adverbs</h3>-->
+    </span>
+    <span class="pos_grp">
+    <h3 class="pos_label">Adverbs</h3>
     <div ng-repeat="synset in synsets | filter:{'pos':'r'}">
         <synset synset="synset" display="display" focus="focus"></synset>
     </div>
-    <!--<h3 ng-show="(synsets|isAdjective).length > 0">Adjectives</h3>-->
+    </span>
+    <span class="pos_grp">
+    <h3 class="pos_label">Adjectives</h3>
     <div ng-repeat="synset in synsets | isAdjective">
         <synset synset="synset" display="display" focus="focus"></synset>
+    </div>
+    </span>
+    <div class="pull-right" ng-show="synsets">
+        <b>Download As:</b> <a target="_self" ng-href="/json/{{link}}">JSON</a>
     </div>
 </div>
 

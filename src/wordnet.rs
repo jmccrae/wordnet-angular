@@ -19,22 +19,22 @@ use xml::reader::{EventReader, XmlEvent};
 #[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd)]
 pub struct WNKey(u32);
 
-impl WNKey {
-    /// Create from an ID and a part of speech
-    pub fn new(id : u32, pos : char) -> Result<WNKey, WordNetLoadError> {
-        match pos {
-            'n' => Ok(WNKey((id << 8) + 1)),
-            'v' => Ok(WNKey((id << 8) + 2)),
-            'a' => Ok(WNKey((id << 8) + 3)),
-            'r' => Ok(WNKey((id << 8) + 4)),
-            's' => Ok(WNKey((id << 8) + 5)),
-            'p' => Ok(WNKey((id << 8) + 6)),
-            'x' => Ok(WNKey((id << 8) + 7)),
-            _ => Err(WordNetLoadError::BadKey(format!("Bad WN POS: {}", pos)))
-        }
-    }
-        
-}
+//impl WNKey {
+//    /// Create from an ID and a part of speech
+//    pub fn new(id : u32, pos : char) -> Result<WNKey, WordNetLoadError> {
+//        match pos {
+//            'n' => Ok(WNKey((id << 8) + 1)),
+//            'v' => Ok(WNKey((id << 8) + 2)),
+//            'a' => Ok(WNKey((id << 8) + 3)),
+//            'r' => Ok(WNKey((id << 8) + 4)),
+//            's' => Ok(WNKey((id << 8) + 5)),
+//            'p' => Ok(WNKey((id << 8) + 6)),
+//            'x' => Ok(WNKey((id << 8) + 7)),
+//            _ => Err(WordNetLoadError::BadKey(format!("Bad WN POS: {}", pos)))
+//        }
+//    }
+//        
+//}
 
 impl FromStr  for WNKey {
     type Err = WordNetLoadError;
@@ -117,7 +117,8 @@ pub struct Synset {
     pub subject : String,
     pub relations : Vec<Relation>,
     pub old_keys : HashMap<String, Vec<WNKey>>,
-    pub gloss : Option<Vec<Gloss>>
+    pub gloss : Option<Vec<Gloss>>,
+    pub foreign : HashMap<String, Vec<String>>
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -372,7 +373,8 @@ impl WordNet {
                                 subject: subject,
                                 relations: rels,
                                 old_keys: HashMap::new(),
-                                gloss: None
+                                gloss: None,
+                                foreign: HashMap::new()
                             });
                             
                         synset_id = None;
@@ -405,6 +407,7 @@ impl WordNet {
         build_indexes(&mut wordnet);
         build_tabs(&mut wordnet)?;
         build_glosstags(&mut wordnet)?;
+        build_omwn(&mut wordnet)?;
         //eprintln!("size_of synsets: {}", wordnet.synsets.len());
         //eprintln!("size_of by_lemma: {}", wordnet. by_lemma.len());
         //eprintln!("size_of by_ili: {}", wordnet.by_ili.len());
@@ -424,9 +427,13 @@ fn build_glosstags(wordnet : &mut WordNet)
          -> Result<(), WordNetLoadError> {
     let ref wn30_idx = wordnet.by_old_id["pwn30"];
     let ref sense_keys = wordnet.by_sense_key;
+    eprintln!("Loading gloss tags (adj)");
     let mut result = read_glosstag_corpus("data/merged/adj.xml", wn30_idx, sense_keys)?;
+    eprintln!("Loading gloss tags (adv)");
     result.extend(read_glosstag_corpus("data/merged/adv.xml", wn30_idx, sense_keys)?);
+    eprintln!("Loading gloss tags (noun)");
     result.extend(read_glosstag_corpus("data/merged/noun.xml", wn30_idx, sense_keys)?);
+    eprintln!("Loading gloss tags (verb)");
     result.extend(read_glosstag_corpus("data/merged/verb.xml", wn30_idx, sense_keys)?);
     for (k,v) in result.iter() {
         wordnet.synsets.get_mut(k)
@@ -475,6 +482,7 @@ fn build_tab<P : AsRef<Path>>(file : P,
     
 
 fn build_indexes(wordnet : &mut WordNet) {
+    eprintln!("Building indexes");
     for (id, synset) in wordnet.synsets.iter() {
         wordnet.ili_skiplist.insert(synset.ili.clone());
         wordnet.id_skiplist.insert(id.clone());
@@ -492,6 +500,7 @@ fn build_indexes(wordnet : &mut WordNet) {
 fn build_tabs(wordnet : &mut WordNet) -> Result<(),WordNetLoadError> {
     for tab in ["pwn15", "pwn16", "pwn17", "pwn171", "pwn20",
                 "pwn21", "pwn30"].iter() {
+        eprintln!("Loading Tab {}", tab);
         let mut map = HashMap::new();
         let mut list = OrderedSkipList::new();
         let path = format!("data/ili-map-{}.tab", tab);
@@ -502,6 +511,47 @@ fn build_tabs(wordnet : &mut WordNet) -> Result<(),WordNetLoadError> {
     }
     Ok(())
 }
+
+fn build_omwn(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
+    for lang in ["als","arb","bul","cmn","qcn","ell","fas","fin","fra",
+                 "heb","hrv","isl","ita","jpn","cat","eus","glg","spa",
+                 "ind","zsm","nld","nno","nob","pol","por","ron",
+                 "slk","lit","slv","swe","tha"].iter() {
+        eprintln!("Loading OMWN {}", lang);
+        let project = match *lang {
+            "cmn" => "cow",
+            "qcn" => "cwn",
+            "ind" => "msa",
+            "zsm" => "msa",
+            "cat" => "mcr",
+            "eus" => "mcr",
+            "glg" => "mcr",
+            "spa" => "mcr",
+            "nno" => "nor",
+            "nob" => "nor",
+            "lit" => "slk",
+            x => x
+        };
+       let omwn = load_omwn(format!("data/wns/{}/wn-data-{}.tab", project, lang),
+            &wordnet.by_old_id["pwn30"])?;
+       for (key, values) in omwn.iter() {
+           match wordnet.synsets.get_mut(&key) {
+               Some(s) => {
+                   let mut vs = values.clone();
+                   vs.dedup();
+                   s.foreign.entry(lang.to_string())
+                       .or_insert_with(|| Vec::new())
+                       .extend(vs);
+               },
+               None => {}
+           }
+       }
+    }
+    Ok(())
+
+}
+
+
 
 quick_error! {
     #[derive(Debug)]
