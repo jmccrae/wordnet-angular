@@ -1,9 +1,19 @@
-
 body {
     font-family: 'Libre Franklin', sans-serif;
     border-top: 4px solid #e77500;
+  margin-bottom: 60px;
 }
+.footer {
+  height: 100px;
+  padding: 20px;
+  font-size: 16px;
+  text-align:right;
+  font-family: 'Suranna', serif;
 
+}
+wordnet .row {
+    min-height:700px;
+}
 h1 {
     font-family: 'Suranna', serif;
 }
