@@ -18,7 +18,7 @@ pub fn load_omwn<P: AsRef<Path>>(p : P, wn30s : &HashMap<WNKey, WNKey>)
                    let wn30key = WNKey::from_str(wn30)?;
                    elems.next().map(|t| {
                         elems.next().map(|v| {
-                            if t.contains("lemma") {
+                            if t.ends_with("lemma") {
                                 wn30s.get(&wn30key).map(|id| {
                                     result.entry(id.clone())
                                         .or_insert_with(|| Vec::new())

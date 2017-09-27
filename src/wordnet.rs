@@ -539,9 +539,7 @@ fn build_omwn(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
                Some(s) => {
                    let mut vs = values.clone();
                    vs.dedup();
-                   s.foreign.entry(lang.to_string())
-                       .or_insert_with(|| Vec::new())
-                       .extend(vs);
+                   s.foreign.insert(lang.to_string(), vs);
                },
                None => {}
            }
