@@ -30,8 +30,8 @@ use std::io::Cursor;
 use std::fs::File;
 use handlebars::{Handlebars};
 use std::collections::HashMap;
-use stable_skiplist::OrderedSkipList;
-use wordnet::Sense;
+//use stable_skiplist::OrderedSkipList;
+//use wordnet::Sense;
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 struct SynsetsHB {
@@ -219,29 +219,6 @@ fn autocomplete_wn_key(k : &str) -> Result<WNKey, &'static str> {
     } else {
         Err("Not a WordNet ID")
     }
-    //if k.len() <= 8 {
-    //    let mut k2 = String::from(k);
-    //    for _ in k.len()..8 {
-    //        k2.push_str("0");
-    //    }
-    //   Ok(WNKey::new(u32::from_str(&k2)
-    //            .map_err(|_| "Not a WordNet ID")?, 'n')
-    //        .map_err(|_| "Not a WordNet ID")?)
-    //} else if k.len() == 9 {
-    //    let k2 : String = k.chars().take(8).collect();
-    //   Ok(WNKey::new(u32::from_str(&k2)
-    //            .map_err(|_| "Not a WordNet ID")?, 'n')
-    //        .map_err(|_| "Not a WordNet ID")?)
-    //} else if k.len() == 10 {
-    //    let k2 : String = k.chars().take(8).collect();
-    //    let pos = k.chars().skip(9).next()
-    //        .ok_or_else(|| "Not a WordNet ID")?;
-    //   Ok(WNKey::new(u32::from_str(&k2)
-    //            .map_err(|_| "Not a WordNet ID")?, pos)
-    //        .map_err(|_| "Not a WordNet ID")?)
-    //} else {
-    //    Err("Not a WordNet ID")
-    //}
 }
 
 #[get("/autocomplete/<index>/<key>")]
@@ -380,58 +357,57 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
     handlebars.register_helper("long_pos", Box::new(long_pos));
     eprintln!("Loading WordNet data");
-    //let wordnet = WordNet::load(config.wn_file)
-    //  .map_err(|e| format!("Failed to load WordNet: {}", e))?;
-    let mut wordnet = WordNet {
-        synsets : HashMap::new(),
-        by_lemma : HashMap::new(),
-        by_ili : HashMap::new(),
-        by_sense_key : HashMap::new(),
-        by_old_id : HashMap::new(),
-        id_skiplist : OrderedSkipList::new(),
-        lemma_skiplist : OrderedSkipList::new(),
-        ili_skiplist : OrderedSkipList::new(),
-        sense_key_skiplist : OrderedSkipList::new(),
-        old_skiplist : HashMap::new()
-    };
-    wordnet.synsets.insert(WNKey::from_str("00001740-n").unwrap(), Synset {
-        definition: "feline mammal usually having thick soft fur and no ability to roar: domestic cats; wildcats".to_string(),
-        lemmas: vec![Sense {
-            lemma: "cat".to_string(), 
-            forms: vec!["cats".to_string()],
-            sense_key: "cat%1:05:00::".to_string(),
-            subcats: Vec::new()
-        }, Sense {
-            lemma: "true cat".to_string(),
-            forms: Vec::new(),
-            sense_key: "true_cat%1:05:00::".to_string(),
-            subcats: vec!["I see the %s".to_string()]
-        }],
-        id: WNKey::from_str("00001740-n").unwrap(),
-        ili: "i46593".to_string(),
-        pos: wordnet::PartOfSpeech::Noun,
-        subject: "noun.animal".to_string(),
-        relations: vec![
-            wordnet::Relation {
-                src_word: Some("cat".to_string()),
-                trg_word: Some("catty".to_string()),
-                rel_type: "derivation".to_string(),
-                target: "00001234-n".to_string(),
-            },
-            wordnet::Relation {
-                src_word: None,
-                trg_word: None,
-                rel_type: "hypernym".to_string(),
-                target: "00005678-n".to_string()
-            }],
-        old_keys: HashMap::new(),
-        gloss: None,
-        foreign: HashMap::new()
-    });
-    wordnet.by_lemma.insert("cat".to_string(), vec![WNKey::from_str("00001740-n").unwrap()]);
-
-
-
+    let wordnet = WordNet::load(config.wn_file)
+      .map_err(|e| format!("Failed to load WordNet: {}", e))?;
+    // Quick loading code for testing
+    //let mut wordnet = WordNet {
+    //    synsets : HashMap::new(),
+    //    by_lemma : HashMap::new(),
+    //    by_ili : HashMap::new(),
+    //    by_sense_key : HashMap::new(),
+    //    by_old_id : HashMap::new(),
+    //    id_skiplist : OrderedSkipList::new(),
+    //    lemma_skiplist : OrderedSkipList::new(),
+    //    ili_skiplist : OrderedSkipList::new(),
+    //    sense_key_skiplist : OrderedSkipList::new(),
+    //    old_skiplist : HashMap::new()
+    //};
+    //wordnet.synsets.insert(WNKey::from_str("00001740-n").unwrap(), Synset {
+    //    definition: "feline mammal usually having thick soft fur and no ability to roar: domestic cats; wildcats".to_string(),
+    //    lemmas: vec![Sense {
+    //        lemma: "cat".to_string(), 
+    //        forms: vec!["cats".to_string()],
+    //        sense_key: "cat%1:05:00::".to_string(),
+    //        subcats: Vec::new()
+    //    }, Sense {
+    //        lemma: "true cat".to_string(),
+    //        forms: Vec::new(),
+    //        sense_key: "true_cat%1:05:00::".to_string(),
+    //        subcats: vec!["I see the %s".to_string()]
+    //    }],
+    //    id: WNKey::from_str("00001740-n").unwrap(),
+    //    ili: "i46593".to_string(),
+    //    pos: wordnet::PartOfSpeech::Noun,
+    //    subject: "noun.animal".to_string(),
+    //    relations: vec![
+    //        wordnet::Relation {
+    //            src_word: Some("cat".to_string()),
+    //            trg_word: Some("catty".to_string()),
+    //            rel_type: "derivation".to_string(),
+    //            target: "00001234-n".to_string(),
+    //        },
+    //        wordnet::Relation {
+    //            src_word: None,
+    //            trg_word: None,
+    //            rel_type: "hypernym".to_string(),
+    //            target: "00005678-n".to_string()
+    //        }],
+    //    old_keys: HashMap::new(),
+    //    gloss: None,
+    //    foreign: HashMap::new(),
+    //    links: vec![links::Link { link_type: links::LinkType::Wikipedia, target: "Cat".to_string()}]
+    //});
+    //wordnet.by_lemma.insert("cat".to_string(), vec![WNKey::from_str("00001740-n").unwrap()]);
     eprintln!("Loaded {} synsets", wordnet.synsets.len());
     Ok(WordNetState {
         wordnet: wordnet,

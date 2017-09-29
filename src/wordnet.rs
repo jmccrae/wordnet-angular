@@ -13,6 +13,7 @@ use std::path::Path;
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 use xml::reader::{EventReader, XmlEvent};
+use links::{Link,load_links};
 
 /// A WordNet part of speech
 #[derive(Clone,Debug)]
@@ -202,7 +203,8 @@ pub struct Synset {
     pub relations : Vec<Relation>,
     pub old_keys : HashMap<String, Vec<WNKey>>,
     pub gloss : Option<Vec<Gloss>>,
-    pub foreign : HashMap<String, Vec<String>>
+    pub foreign : HashMap<String, Vec<String>>,
+    pub links : Vec<Link>
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -458,7 +460,8 @@ impl WordNet {
                                 relations: rels,
                                 old_keys: HashMap::new(),
                                 gloss: None,
-                                foreign: HashMap::new()
+                                foreign: HashMap::new(),
+                                links: Vec::new()
                             });
                             
                         synset_id = None;
@@ -490,8 +493,9 @@ impl WordNet {
         };
         build_indexes(&mut wordnet);
         build_tabs(&mut wordnet)?;
-        build_glosstags(&mut wordnet)?;
+        //build_glosstags(&mut wordnet)?;
         build_omwn(&mut wordnet)?;
+        load_links(&mut wordnet);
         //eprintln!("size_of synsets: {}", wordnet.synsets.len());
         //eprintln!("size_of by_lemma: {}", wordnet. by_lemma.len());
         //eprintln!("size_of by_ili: {}", wordnet.by_ili.len());

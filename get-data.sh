@@ -52,3 +52,8 @@ if [ ! -f data/w3c-wn20.csv ]
 then
     curl http://john.mccr.ae/w3c-wn20.csv -o data/w3c-wn20.csv
 fi
+
+if [ ! -f data/ili-map-dbpedia.ttl ]
+then
+    curl http://john.mccr.ae/ili-map-dbpedia.ttl -o data/ili-map-dbpedia.ttl
+fi
