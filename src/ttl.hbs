@@ -1,0 +1,38 @@
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix ili: <http://ili.globalwordnet.org/ili/> .
+@prefix lime: <http://www.w3.org/ns/lemon/lime#> .
+@prefix ontolex: <http://www.w3.org/ns/lemon/ontolex#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix synsem: <http://www.w3.org/ns/lemon/synsem#> .
+@prefix wn: <http://wordnet-rdf.princeton.edu/ontology#> .
+@prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
+@prefix pwn: <http://wordnet-rdf.princeton.edu/rdf/> .
+
+{{#each entries}}
+pwn:{{lemma_escape @key}}
+  ontolex:canonicalForm [
+    ontolex:writtenRep "{{this.0.lemmas.0.lemma}}"@en
+  ] ;
+{{#each this}} ontolex:sense pwn:{{lemmas.0.lemma}}-{{id}} ; {{/each}}
+{{#each this.0.lemmas.0.subcats}} synsem:synBehavior [ rdfs:label "{{this}}"@wn ] ; {{/each}} wn:partOfSpeech wn:{{long_pos this.0.pos}} ;
+  a ontolex:LexicalEntry .  
+{{/each}}
+
+{{#each entries}}{{#each this}}
+pwn:{{lemmas.0.lemma}}-{{id}}
+{{#each relations}}{{#if src_word}} wn:{{rel_type}} pwn:{{trg_word}}-{{target}} ; {{/if}}{{/each}}
+   a ontolex:Sense .
+{{/each}}{{/each}}
+
+{{#each synsets}}
+pwn:{{id}} 
+  owl:sameAs ili:{{ili}} ;
+  wn:partOfSpeech wn:{{long_pos pos}} ;
+  dc:subject "{{subject}}" ;
+  wn:definition [ "{{definition}}"@en ] ;
+{{#each relations}}{{#if src_word}}{{else}}  wn:rel_type pwn:{{target}} ; {{/if}}{{/each}}
+   a ontolex:LexicalConcept . 
+{{/each}}

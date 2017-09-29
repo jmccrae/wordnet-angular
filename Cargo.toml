@@ -13,4 +13,4 @@ clap = "2.26.1"
 serde = "*"
 serde_json = "*"
 serde_derive = "*"
-
+handlebars = "0.29.1"

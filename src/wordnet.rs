@@ -14,6 +14,90 @@ use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 use xml::reader::{EventReader, XmlEvent};
 
+/// A WordNet part of speech
+#[derive(Clone,Debug)]
+pub enum PartOfSpeech {
+    Noun, Verb, Adjective, Adverb, AdjectiveSatellite, Other
+}
+
+impl FromStr for PartOfSpeech {
+    type Err = WordNetLoadError;
+    fn from_str(s : &str) -> Result<PartOfSpeech, WordNetLoadError> { 
+        match s {
+            "n" => Ok(PartOfSpeech::Noun),
+            "v" => Ok(PartOfSpeech::Verb),
+            "a" => Ok(PartOfSpeech::Adjective),
+            "s" => Ok(PartOfSpeech::AdjectiveSatellite),
+            "r" => Ok(PartOfSpeech::Adverb),
+            "x" => Ok(PartOfSpeech::Other),
+            _ => Err(WordNetLoadError::Schema("Bad part of speech value"))
+        }
+    }
+}
+
+impl ToString for PartOfSpeech {
+    fn to_string(&self) -> String {
+        match *self {
+            PartOfSpeech::Noun => "n".to_string(),
+            PartOfSpeech::Verb => "v".to_string(),
+            PartOfSpeech::Adjective => "a".to_string(),
+            PartOfSpeech::AdjectiveSatellite => "s".to_string(),
+            PartOfSpeech::Adverb => "r".to_string(),
+            PartOfSpeech::Other => "x".to_string()
+        }
+    }
+}
+
+impl PartOfSpeech {
+    pub fn as_long_string(&self) -> &'static str {
+        match *self {
+            PartOfSpeech::Noun => "noun",
+            PartOfSpeech::Verb => "verb",
+            PartOfSpeech::Adjective => "adjective",
+            PartOfSpeech::AdjectiveSatellite => "adjective_satellite",
+            PartOfSpeech::Adverb => "adverb",
+            PartOfSpeech::Other => "other"
+        }
+    }
+}
+
+impl Serialize for PartOfSpeech {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for PartOfSpeech {
+    fn deserialize<D>(deserializer: D) -> Result<PartOfSpeech, D::Error>
+        where D: Deserializer<'de> {
+        deserializer.deserialize_str(PartOfSpeechVisitor)        
+    }
+}
+
+struct PartOfSpeechVisitor;
+
+impl<'de> Visitor<'de> for PartOfSpeechVisitor {
+    type Value = PartOfSpeech;
+
+    fn expecting(&self, formatter : &mut Formatter) -> FormatResult {
+        formatter.write_str("A part of speech value as a single letter: n,v,a,r,s or x")
+    }
+
+    fn visit_str<E>(self, value : &str) -> Result<PartOfSpeech, E>  where E : DeError {
+        PartOfSpeech::from_str(value)
+            .map_err(|e| E::custom(e))
+    }
+
+    fn visit_string<E>(self, value : String) -> Result<PartOfSpeech, E> where E : DeError {
+        PartOfSpeech::from_str(&value)
+            .map_err(|e| E::custom(e))
+    }
+}
+
+
+
+
 /// A WordNet Key consisting of 8 digits and a part of speech.
 /// This data structure stores the value as a 4-byte integer to save memory
 #[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd)]
@@ -113,7 +197,7 @@ pub struct Synset {
     pub lemmas : Vec<Sense>,
     pub id : WNKey,
     pub ili : String,
-    pub pos : String,
+    pub pos : PartOfSpeech,
     pub subject : String,
     pub relations : Vec<Relation>,
     pub old_keys : HashMap<String, Vec<WNKey>>,
@@ -369,7 +453,7 @@ impl WordNet {
                                 lemmas: entries,
                                 id: ssid,
                                 ili: ili,
-                                pos: pos,
+                                pos: PartOfSpeech::from_str(&pos)?,
                                 subject: subject,
                                 relations: rels,
                                 old_keys: HashMap::new(),

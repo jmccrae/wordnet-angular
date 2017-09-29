@@ -40,3 +40,15 @@ then
     unzip all.zip -d data
     rm all.zip
 fi
+
+if [ ! -d data/verbnet ]
+then
+    curl http://verbs.colorado.edu/verbnet_downloads/vn_3_14.tar.gz -o vn_3_14.tar.gz
+    tar xzvf vn_3_14.tar.gz -C data
+    rm vn_3_14.tar.gz
+fi
+
+if [ ! -f data/w3c-wn20.csv ]
+then
+    curl http://john.mccr.ae/w3c-wn20.csv -o data/w3c-wn20.csv
+fi

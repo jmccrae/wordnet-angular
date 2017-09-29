@@ -11,13 +11,15 @@ extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
+extern crate handlebars;
 
 mod wordnet;
 mod glosstag;
 mod omwn;
+mod links;
 
 use std::str::FromStr;
-use wordnet::{WNKey, WordNet};
+use wordnet::{WNKey, WordNet, Synset};
 use clap::{App, Arg, ArgMatches};
 use std::process::exit;
 use rocket::State;
@@ -26,6 +28,71 @@ use rocket::http::{ContentType, Status};
 use stable_skiplist::Bound::{Included, Unbounded};
 use std::io::Cursor;
 use std::fs::File;
+use handlebars::{Handlebars};
+use std::collections::HashMap;
+use stable_skiplist::OrderedSkipList;
+use wordnet::Sense;
+
+#[derive(Clone,Debug,Serialize,Deserialize)]
+struct SynsetsHB {
+    synsets : Vec<Synset>,
+    entries : HashMap<String, Vec<Synset>>,
+    index : String,
+    name : String
+}
+
+fn make_synsets_hb(synsets : Vec<Synset>, index : String, 
+                   name : String) -> SynsetsHB {
+    let mut entries = HashMap::new();
+    for synset in synsets.iter() {
+        for sense in synset.lemmas.iter() {
+            let mut s2 = synset.clone();
+            s2.lemmas = vec![sense.clone()];
+            s2.relations.retain(|r| {
+                match r.src_word {
+                    None => true,
+                    Some(ref s) => *s == sense.lemma
+                }
+            });
+            entries.entry(format!("{}-{}", sense.lemma, synset.pos.to_string()))
+                .or_insert_with(|| Vec::new())
+                .push(s2);
+        }
+    }
+    SynsetsHB {
+        synsets: synsets,
+        entries: entries,
+        index : index,
+        name: name
+    }
+}
+
+#[get("/ttl/<index>/<name>")]
+fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String) 
+        -> Result<Response<'r>, &'static str> {
+    Ok(Response::build()
+       .header(ContentType::new("text","turtle"))
+       .sized_body(Cursor::new(
+            state.handlebars.render("ttl", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name)).map_err(|e| {
+                    eprintln!("{}", e);
+                    "Could not apply template"
+                })?))
+       .finalize())
+}
+
+
+#[get("/xml/<index>/<name>")]
+fn get_xml<'r>(state : State<WordNetState>, index : String, name : String) 
+        -> Result<Response<'r>, &'static str> {
+    Ok(Response::build()
+       .header(ContentType::XML)
+       .sized_body(Cursor::new(
+            state.handlebars.render("xml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name)).map_err(|e| {
+                    eprintln!("{}", e);
+                    "Could not apply template"
+                })?))
+       .finalize())
+}
 
 #[get("/flag/<code>")]
 fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
@@ -76,21 +143,19 @@ fn get_static<'r>(name : String) -> Response<'r> {
     }
 }
 
-#[get("/json/<index>/<id>")]
-fn synset<'r>(index : String, id : String, 
-              status : State<WordNetState>) 
-        -> Result<Response<'r>,&'static str> {
-    let synsets = (if index == "id" {
-        status.wordnet.synsets.get(&WNKey::from_str(&id)
+fn get_synsets(wordnet : &WordNet, index : &str, id : &str) 
+        -> Result<Vec<Synset>, &'static str> {
+    (if index == "id" {
+        wordnet.synsets.get(&WNKey::from_str(id)
                 .map_err(|_| "Not a WordNet ID")?)
             .ok_or_else(|| "Synset Not Found")
             .map(|x| vec![x.clone()])
     } else if index == "lemma" {
-        match status.wordnet.by_lemma.get(&id)
+        match wordnet.by_lemma.get(id)
             .ok_or_else(|| "Synset Not Found") {
             Ok(x) => {
                 Ok(x.iter().map(|y| {
-                    status.wordnet.synsets.get(y)
+                    wordnet.synsets.get(y)
                         .expect("Synset ID not found")
                         .clone()
                 }).collect())
@@ -98,33 +163,40 @@ fn synset<'r>(index : String, id : String,
             Err(e) => Err(e)
         }
     } else if index == "ili" {
-        status.wordnet.by_ili.get(&id)
+        wordnet.by_ili.get(id)
             .ok_or_else(|| "Synset Not Found")
             .map(|x| {
-                vec![status.wordnet.synsets.get(x)
+                vec![wordnet.synsets.get(x)
                     .expect("Synset ID not found")
                     .clone()]
             })
     } else if index == "sense_key" {
-        status.wordnet.by_sense_key.get(&id)
+        wordnet.by_sense_key.get(id)
             .ok_or_else(|| "Synset Not Found")
             .map(|x| {
-                vec![status.wordnet.synsets.get(x)
+                vec![wordnet.synsets.get(x)
                     .expect("Synset ID not found")
                     .clone()]
             })
-     } else if status.wordnet.by_old_id.contains_key(&index) {
-        status.wordnet.by_old_id[&index].get(&WNKey::from_str(&id)
+     } else if wordnet.by_old_id.contains_key(index) {
+        wordnet.by_old_id[index].get(&WNKey::from_str(id)
                 .map_err(|_| "Not a WordNet Key")?)
             .ok_or_else(|| "Synset Not Found")
             .map(|x| {
-                vec![status.wordnet.synsets.get(x)
+                vec![wordnet.synsets.get(x)
                     .expect("Synset ID not found")
                     .clone()]
             })
       } else {
         Err("Bad ID")
-    })?;
+    })
+}
+
+#[get("/json/<index>/<id>")]
+fn synset<'r>(index : String, id : String, 
+              status : State<WordNetState>) 
+        -> Result<Response<'r>,&'static str> {
+    let synsets = get_synsets(&status.wordnet, &index, &id)?;
     let json = serde_json::to_string(&synsets)
         .map_err(|_| "Failed to serialize synset")?;
     Ok(Response::build()
@@ -270,16 +342,100 @@ impl Config {
 }
 
 struct WordNetState {
-    wordnet: WordNet
+    wordnet: WordNet,
+    handlebars: Handlebars
 }
 
+fn lemma_escape(h : &handlebars::Helper,
+                _ : &Handlebars,
+                rc : &mut handlebars::RenderContext) -> Result<(), handlebars::RenderError> {
+    let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
+    try!(rc.writer.write(param.replace(" ", "_").into_bytes().as_ref()));
+    Ok(())
+}
+
+fn long_pos(h : &handlebars::Helper,
+                _ : &Handlebars,
+                rc : &mut handlebars::RenderContext) -> Result<(), handlebars::RenderError> {
+    let param = h.param(0)
+        .ok_or_else(|| handlebars::RenderError::new("No parameter for pos_long"))
+        .and_then(|v| {
+            let v2 = v.value().as_str()
+                .ok_or_else(|| handlebars::RenderError::new("No parameter value for pos long"))?;
+            eprintln!("{}", v2);
+            wordnet::PartOfSpeech::from_str(v2)
+                .map_err(|e| handlebars::RenderError::new(&format!("{}", e)))
+        })?;
+    rc.writer.write(param.as_long_string().as_bytes().as_ref())?;
+    Ok(())
+}
+
+
 fn prepare_server(config : Config) -> Result<WordNetState, String> {
+    let mut handlebars = Handlebars::new();
+    handlebars.register_template_string("xml", include_str!("xml.hbs"))
+        .expect("Could not load xml.hbs");
+    handlebars.register_template_string("ttl", include_str!("ttl.hbs"))
+        .expect("Could not load ttl.hbs");
+    handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
+    handlebars.register_helper("long_pos", Box::new(long_pos));
     eprintln!("Loading WordNet data");
-    let wordnet = WordNet::load(config.wn_file)
-      .map_err(|e| format!("Failed to load WordNet: {}", e))?;
+    //let wordnet = WordNet::load(config.wn_file)
+    //  .map_err(|e| format!("Failed to load WordNet: {}", e))?;
+    let mut wordnet = WordNet {
+        synsets : HashMap::new(),
+        by_lemma : HashMap::new(),
+        by_ili : HashMap::new(),
+        by_sense_key : HashMap::new(),
+        by_old_id : HashMap::new(),
+        id_skiplist : OrderedSkipList::new(),
+        lemma_skiplist : OrderedSkipList::new(),
+        ili_skiplist : OrderedSkipList::new(),
+        sense_key_skiplist : OrderedSkipList::new(),
+        old_skiplist : HashMap::new()
+    };
+    wordnet.synsets.insert(WNKey::from_str("00001740-n").unwrap(), Synset {
+        definition: "feline mammal usually having thick soft fur and no ability to roar: domestic cats; wildcats".to_string(),
+        lemmas: vec![Sense {
+            lemma: "cat".to_string(), 
+            forms: vec!["cats".to_string()],
+            sense_key: "cat%1:05:00::".to_string(),
+            subcats: Vec::new()
+        }, Sense {
+            lemma: "true cat".to_string(),
+            forms: Vec::new(),
+            sense_key: "true_cat%1:05:00::".to_string(),
+            subcats: vec!["I see the %s".to_string()]
+        }],
+        id: WNKey::from_str("00001740-n").unwrap(),
+        ili: "i46593".to_string(),
+        pos: wordnet::PartOfSpeech::Noun,
+        subject: "noun.animal".to_string(),
+        relations: vec![
+            wordnet::Relation {
+                src_word: Some("cat".to_string()),
+                trg_word: Some("catty".to_string()),
+                rel_type: "derivation".to_string(),
+                target: "00001234-n".to_string(),
+            },
+            wordnet::Relation {
+                src_word: None,
+                trg_word: None,
+                rel_type: "hypernym".to_string(),
+                target: "00005678-n".to_string()
+            }],
+        old_keys: HashMap::new(),
+        gloss: None,
+        foreign: HashMap::new()
+    });
+    wordnet.by_lemma.insert("cat".to_string(), vec![WNKey::from_str("00001740-n").unwrap()]);
+
+
+
     eprintln!("Loaded {} synsets", wordnet.synsets.len());
     Ok(WordNetState {
-        wordnet: wordnet
+        wordnet: wordnet,
+        handlebars: handlebars
     })
 }
 
@@ -300,7 +456,9 @@ fn main() {
                 Ok(state) => {
                     rocket::ignite()
                         .manage(state)
-                        .mount("/", routes![index, synset, get_flag,
+                        .mount("/", routes![
+                                get_xml, get_ttl,
+                                index, synset, get_flag,
                                 autocomplete_lemma, get_static,
                                 lemma, id, ili, sense_key, 
                                 pwn30, pwn21, pwn20, pwn17,
