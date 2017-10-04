@@ -14,6 +14,9 @@ use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 use xml::reader::{EventReader, XmlEvent};
 use links::{Link,load_links};
+use stable_skiplist::Bound::{Included, Unbounded};
+use stable_skiplist::ordered_skiplist::{Iter};
+use std::iter::Take;
 
 /// A WordNet part of speech
 #[derive(Clone,Debug)]
@@ -224,16 +227,60 @@ pub struct Relation {
 }
 
 pub struct WordNet {
-    pub synsets : HashMap<WNKey, Synset>,
-    pub by_lemma : HashMap<String, Vec<WNKey>>,
-    pub by_ili : HashMap<String, WNKey>,
-    pub by_sense_key : HashMap<String, WNKey>,
-    pub by_old_id : HashMap<String, HashMap<WNKey, WNKey>>,
-    pub id_skiplist : OrderedSkipList<WNKey>,
-    pub lemma_skiplist : OrderedSkipList<String>,
-    pub ili_skiplist : OrderedSkipList<String>,
-    pub sense_key_skiplist : OrderedSkipList<String>,
-    pub old_skiplist : HashMap<String, OrderedSkipList<WNKey>>
+    synsets : HashMap<WNKey, Synset>,
+    by_lemma : HashMap<String, Vec<WNKey>>,
+    by_ili : HashMap<String, WNKey>,
+    by_sense_key : HashMap<String, WNKey>,
+    by_old_id : HashMap<String, HashMap<WNKey, WNKey>>,
+    id_skiplist : OrderedSkipList<WNKey>,
+    lemma_skiplist : OrderedSkipList<String>,
+    ili_skiplist : OrderedSkipList<String>,
+    sense_key_skiplist : OrderedSkipList<String>,
+    old_skiplist : HashMap<String, OrderedSkipList<WNKey>>
+}
+
+
+impl WordNet {
+    pub fn get_synset(&self, key : &WNKey) -> Option<&Synset> { self.synsets.get(key) }
+    pub fn get_by_lemma(&self, lemma : &str) -> Vec<&Synset> { 
+        let v = Vec::new();
+        self.by_lemma.get(lemma).unwrap_or(&v)
+            .iter().flat_map(|l| self.synsets.get(l)).collect()
+    }
+    pub fn get_by_ili(&self, ili : &str) -> Option<&Synset> {
+        self.by_ili.get(ili)
+            .and_then(|l| self.synsets.get(l))
+    }
+    pub fn get_by_sense_key(&self, sense_key : &str) -> Option<&Synset> {
+        self.by_sense_key.get(sense_key)
+            .and_then(|l| self.synsets.get(l))
+    }
+    pub fn get_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<&Synset>,&'static str> {
+        let map = self.by_old_id.get(index).ok_or("No index")?;
+        Ok(map.get(id).and_then(|l| self.synsets.get(l)))
+    }
+    pub fn list_by_id(&self, key : &WNKey, 
+                      limit : usize) -> Take<Iter<WNKey>> {
+        self.id_skiplist.range(Included(key), Unbounded).take(limit)
+    }
+    pub fn list_by_lemma(&self, lemma : &String,
+                          limit : usize) -> Take<Iter<String>> {
+        self.lemma_skiplist.range(Included(lemma), Unbounded).take(limit)
+    }
+    pub fn list_by_ili(&self, ili : &String,
+                        limit : usize) -> Take<Iter<String>> {
+        self.ili_skiplist.range(Included(ili), Unbounded).take(limit)
+    }
+    pub fn list_by_sense_key(&self, sense_key : &String,
+                              limit : usize) -> Take<Iter<String>> {
+        self.sense_key_skiplist.range(Included(sense_key), Unbounded)
+            .take(limit)
+    }
+    pub fn list_by_old_id(&self, index : &str, key : &WNKey,
+                      limit : usize) -> Result<Take<Iter<WNKey>>,&'static str> {
+        let list = self.old_skiplist.get(index).ok_or("Index not found")?;
+        Ok(list.range(Included(key), Unbounded).take(limit))
+    }
 }
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
@@ -493,9 +540,11 @@ impl WordNet {
         };
         build_indexes(&mut wordnet);
         build_tabs(&mut wordnet)?;
-        //build_glosstags(&mut wordnet)?;
+        build_glosstags(&mut wordnet)?;
         build_omwn(&mut wordnet)?;
-        load_links(&mut wordnet);
+        load_links(&wordnet.by_old_id["pwn20"],
+                   &wordnet.by_ili,
+                   &mut wordnet.synsets);
         //eprintln!("size_of synsets: {}", wordnet.synsets.len());
         //eprintln!("size_of by_lemma: {}", wordnet. by_lemma.len());
         //eprintln!("size_of by_ili: {}", wordnet.by_ili.len());

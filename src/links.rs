@@ -1,5 +1,5 @@
 use std::path::Path;
-use wordnet::{WNKey,WordNetLoadError,WordNet};
+use wordnet::{WNKey,WordNetLoadError,Synset};
 use std::collections::HashMap;
 use std::io::{BufRead,BufReader};
 use std::fs::{read_dir,File};
@@ -17,24 +17,26 @@ pub struct Link {
 }
 
 /// Load all links to VerbNet, W3C and Wikipedia
-pub fn load_links(wordnet : &mut WordNet) {
+pub fn load_links(wn20 : &HashMap<WNKey,WNKey>,
+                  ili : &HashMap<String,WNKey>,
+                  synsets : &mut HashMap<WNKey, Synset>) {
     eprintln!("Loading VerbNet");
     let verbs = load_all_verbs().unwrap_or_else(|e| {
         eprintln!("Failed to load VerbNet: {}", e);
         HashMap::new()
     });
     eprintln!("Loading W3C Links");
-    let w3c = load_w3c(&wordnet.by_old_id["pwn20"]).unwrap_or_else(|e| {
+    let w3c = load_w3c(&wn20).unwrap_or_else(|e| {
         eprintln!("Failed to load W3C: {}", e);
         HashMap::new()
     });
     eprintln!("Loading Wikipedia Links");
-    let wwim = load_wwim(&wordnet.by_ili).unwrap_or_else(|e| {
+    let wwim = load_wwim(&ili).unwrap_or_else(|e| {
         eprintln!("Failed to load Wikipedia Links: {}", e);
         HashMap::new()
     });
 
-    for (_,synset) in wordnet.synsets.iter_mut() {
+    for (_,synset) in synsets.iter_mut() {
        if let Some(w) = w3c.get(&synset.id) {
            synset.links.push(Link { link_type: LinkType::W3C, target: w.to_string() });
        }

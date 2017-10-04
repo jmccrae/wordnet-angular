@@ -25,7 +25,6 @@ use std::process::exit;
 use rocket::State;
 use rocket::Response;
 use rocket::http::{ContentType, Status};
-use stable_skiplist::Bound::{Included, Unbounded};
 use std::io::Cursor;
 use std::fs::File;
 use handlebars::{Handlebars};
@@ -145,51 +144,24 @@ fn get_static<'r>(name : String) -> Response<'r> {
 
 fn get_synsets(wordnet : &WordNet, index : &str, id : &str) 
         -> Result<Vec<Synset>, &'static str> {
-    (if index == "id" {
-        wordnet.synsets.get(&WNKey::from_str(id)
+    let wn = if index == "id" {
+        vec![wordnet.get_synset(&WNKey::from_str(id)
                 .map_err(|_| "Not a WordNet ID")?)
-            .ok_or_else(|| "Synset Not Found")
-            .map(|x| vec![x.clone()])
+            .ok_or("Synset Not Found")?.clone()]
     } else if index == "lemma" {
-        match wordnet.by_lemma.get(id)
-            .ok_or_else(|| "Synset Not Found") {
-            Ok(x) => {
-                Ok(x.iter().map(|y| {
-                    wordnet.synsets.get(y)
-                        .expect("Synset ID not found")
-                        .clone()
-                }).collect())
-            },
-            Err(e) => Err(e)
-        }
+        wordnet.get_by_lemma(id).iter().map(|x| (*x).clone()).collect()
     } else if index == "ili" {
-        wordnet.by_ili.get(id)
-            .ok_or_else(|| "Synset Not Found")
-            .map(|x| {
-                vec![wordnet.synsets.get(x)
-                    .expect("Synset ID not found")
-                    .clone()]
-            })
+        vec![wordnet.get_by_ili(id)
+                .ok_or("Synset Not Found")?.clone()]
     } else if index == "sense_key" {
-        wordnet.by_sense_key.get(id)
-            .ok_or_else(|| "Synset Not Found")
-            .map(|x| {
-                vec![wordnet.synsets.get(x)
-                    .expect("Synset ID not found")
-                    .clone()]
-            })
-     } else if wordnet.by_old_id.contains_key(index) {
-        wordnet.by_old_id[index].get(&WNKey::from_str(id)
-                .map_err(|_| "Not a WordNet Key")?)
-            .ok_or_else(|| "Synset Not Found")
-            .map(|x| {
-                vec![wordnet.synsets.get(x)
-                    .expect("Synset ID not found")
-                    .clone()]
-            })
-      } else {
-        Err("Bad ID")
-    })
+        vec![wordnet.get_by_sense_key(id)
+                .ok_or("Synset Not Found")?.clone()]
+     } else {
+        vec![wordnet.get_by_old_id(index, &WNKey::from_str(id)
+                .map_err(|_| "Not a WordNet Key")?)?
+                .ok_or("Synset Not Found")?.clone()]
+    };
+    Ok(wn)
 }
 
 #[get("/json/<index>/<id>")]
@@ -226,7 +198,7 @@ fn autocomplete_lemma(index : String, key : String,
         state : State<WordNetState>) -> Result<String, &'static str> {
     let mut results = Vec::new();
     if index == "lemma" {
-        for s in state.wordnet.lemma_skiplist.range(Included(&key), Unbounded).take(10) {
+        for s in state.wordnet.list_by_lemma(&key, 10) {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -236,7 +208,7 @@ fn autocomplete_lemma(index : String, key : String,
         }   
     } else if index == "id" {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.id_skiplist.range(Included(&key2), Unbounded).take(10) {
+        for s in state.wordnet.list_by_id(&key2, 10) {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -245,7 +217,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
     } else if index == "ili" {
-        for s in state.wordnet.ili_skiplist.range(Included(&key), Unbounded).take(10) {
+        for s in state.wordnet.list_by_ili(&key, 10) {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -254,7 +226,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
      } else if index == "sense_key" {
-        for s in state.wordnet.sense_key_skiplist.range(Included(&key), Unbounded).take(10) {
+        for s in state.wordnet.list_by_sense_key(&key, 10) {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -262,9 +234,9 @@ fn autocomplete_lemma(index : String, key : String,
                 })
             }
         }   
-     } else if state.wordnet.old_skiplist.contains_key(&index) {
+     } else {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.old_skiplist[&index].range(Included(&key2), Unbounded).take(10) {
+        for s in state.wordnet.list_by_old_id(&index, &key2, 10)? {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -408,7 +380,6 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     //    links: vec![links::Link { link_type: links::LinkType::Wikipedia, target: "Cat".to_string()}]
     //});
     //wordnet.by_lemma.insert("cat".to_string(), vec![WNKey::from_str("00001740-n").unwrap()]);
-    eprintln!("Loaded {} synsets", wordnet.synsets.len());
     Ok(WordNetState {
         wordnet: wordnet,
         handlebars: handlebars
