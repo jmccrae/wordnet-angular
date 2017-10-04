@@ -301,41 +301,80 @@ impl<'a,'r> FromRequest<'a,'r> for ContentNegotiation {
 }
     
 
-fn negotiated<'r>(idx : &'static str, key2 : String, neg2 : ContentNegotiation) -> Response<'r> {
-    let (key,neg) = if key2.ends_with(".rdf") {
-        (key2[0..(key2.len()-4)].to_string(), ContentNegotiation::RdfXml)
-    } else if key2.ends_with(".ttl") {
-        (key2[0..(key2.len()-4)].to_string(), ContentNegotiation::Turtle)
-    } else if key2.ends_with(".json") {
-        (key2[0..(key2.len()-5)].to_string(), ContentNegotiation::Json)
-    } else if key2.ends_with(".html") {
-        (key2[0..(key2.len()-5)].to_string(), ContentNegotiation::Html)
+fn negotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) -> Response<'r> {
+    if key.ends_with(".rdf") {
+        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
+    } else if key.ends_with(".ttl") {
+        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::Turtle)
+    } else if key.ends_with(".json") {
+        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Json)
+    } else if key.ends_with(".html") {
+        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Html)
     } else {
-        (key2, neg2)
-    };
-    match neg {
-        ContentNegotiation::Html => { index() },
-        ContentNegotiation::RdfXml => {
-            Response::build()
-                .status(Status::SeeOther)
-                .header(Location(format!("http://wordnet-rdf.princeton.edu/rdf/{}/{}", idx, key)))
-                .finalize()
-        },
-        ContentNegotiation::Turtle => {
-            Response::build()
-                .status(Status::SeeOther)
-                .header(Location(format!("http://wordnet-rdf.princeton.edu/ttl/{}/{}", idx, key)))
-                .finalize()
-        },
-
-        ContentNegotiation::Json => {
-            Response::build()
-                .status(Status::SeeOther)
-                .header(Location(format!("http://wordnet-rdf.princeton.edu/json/{}/{}", idx, key)))
-                .finalize()
+        match neg {
+            ContentNegotiation::Html => { index() },
+            ContentNegotiation::RdfXml => {
+                Response::build()
+                    .status(Status::SeeOther)
+                    .header(Location(format!("/rdf/{}/{}", idx, key)))
+                    .finalize()
+            },
+            ContentNegotiation::Turtle => {
+                Response::build()
+                    .status(Status::SeeOther)
+                    .header(Location(format!("/ttl/{}/{}", idx, key)))
+                    .finalize()
+            },
+            ContentNegotiation::Json => {
+                Response::build()
+                    .status(Status::SeeOther)
+                    .header(Location(format!("/{}/{}", idx, key)))
+                    .finalize()
+            }
         }
     }
 }
+
+fn renegotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) -> Response<'r> {
+    if key.ends_with(".rdf") {
+        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
+    } else if key.ends_with(".ttl") {
+        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::Turtle)
+    } else if key.ends_with(".json") {
+        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Json)
+    } else if key.ends_with(".html") {
+        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Html)
+    } else {
+        match neg {
+            ContentNegotiation::Html => { 
+                Response::build()
+                    .status(Status::SeeOther)
+                    .header(Location(format!("/{}/{}", idx, key)))
+                    .finalize()
+            },
+            ContentNegotiation::RdfXml => {
+                Response::build()
+                    .status(Status::SeeOther)
+                    .header(Location(format!("/rdf/{}/{}", idx, key)))
+                    .finalize()
+            },
+            ContentNegotiation::Turtle => {
+                Response::build()
+                    .status(Status::SeeOther)
+                    .header(Location(format!("/ttl/{}/{}", idx, key)))
+                    .finalize()
+            },
+
+            ContentNegotiation::Json => {
+                Response::build()
+                    .status(Status::SeeOther)
+                    .header(Location(format!("/json/{}/{}", idx, key)))
+                    .finalize()
+            }
+        }
+    }
+}
+
 
 #[get("/lemma/<key>")]
 fn lemma<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("lemma", key, neg) }
@@ -358,19 +397,19 @@ fn pwn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiate
 #[get("/pwn16/<key>")]
 fn pwn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn16", key, neg) }
 #[get("/wn31/<key>")]
-fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("id", key, neg) }
+fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("id", key[1..key.len()].to_string(), neg) }
 #[get("/wn30/<key>")]
-fn wn30<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn30", key, neg) }
+fn wn30<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn30", key, neg) }
 #[get("/wn21/<key>")]
-fn wn21<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn21", key, neg) }
+fn wn21<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn21", key, neg) }
 #[get("/wn20/<key>")]
-fn wn20<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn20", key, neg) }
+fn wn20<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn20", key, neg) }
 #[get("/wn171/<key>")]
-fn wn171<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn171", key, neg) }
+fn wn171<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn171", key, neg) }
 #[get("/wn17/<key>")]
-fn wn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn17", key, neg) }
+fn wn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn17", key, neg) }
 #[get("/wn16/<key>")]
-fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn16", key, neg) }
+fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn16", key, neg) }
 
 #[get("/")]
 fn index<'r>() -> Response<'r> {

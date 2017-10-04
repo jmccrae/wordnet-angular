@@ -38,30 +38,18 @@
 <em>WordNet is supported by the National Science Foundation under Grant Number 0855157. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the creators of WordNet and do not necessarily reflect the views of the National Science Foundation.</em>
 
 <p>This is the RDF version of WordNet, created by mapping the existing WordNet data into
-RDF. The data is structured according to the <a href="http://lemon-model.net">lemon</a> model.
+RDF. The data is structured according to the <a href="https://www.w3.org/2016/05/ontolex/">OntoLex-Lemon</a> model.
 In addition, links have been added from the following sources:</p>
 
 <ul>
     <li> <a href="http://verbs.colorado.edu/~mpalmer/projects/verbnet.html">VerbNet</a> </li>
-    <li> <a href="http://lemon-model.net/lexica/uby">lemonUBY</a></li>
+    <!--<li> <a href="http://lemon-model.net/lexica/uby">lemonUBY</a></li>-->
     <li> <a href="http://www.w3.org/TR/wordnet-rdf/">W3C WordNet</a></li>
-    <li> <a href="http://lexvo.org">LexVo</a></li>
+    <!--    <li> <a href="http://lexvo.org">LexVo</a></li>-->
     <li> Translations derived from <a href="http://casta-net.jp/~kuribayashi/multi/">Open Multilingual WordNet</a> </li>
 </ul>
 
 <p>These links increase the usefulness of the WordNet data. If you would like to contribute extra linking to WordNet please <a href="http://wordnet.princeton.edu/wordnet/contact">Contact us</a>.</p>
-
-<h3>Search</h3>
-
-<p>You may search the RDF version of WordNet by entering a lemma into the following query field:</p>
-
-<form action="search">
-    <!--<label for="query">Search</label>--><input type="text" name="query"/><br/>
-    <input type="submit" value="Search"/>
-</form>
-
-<!--<p>Alternatively you may use the <a href="sparql/">SPARQL endpoint</a> which uses the
-<a href="http://www.w3.org/TR/rdf-sparql-query/">SPARQL query language</a>.</p>-->
 
 <h3>Ontology</h3>
 
@@ -70,6 +58,8 @@ In addition, links have been added from the following sources:</p>
 <blockquote>
   <a href="ontology">http://wordnet-rdf.princeton.edu/ontology</a>
 </blockquote>
+
+<p>A human-readable version is given <a href="/ontology.html">here</a>.
 
 <p>The ontology in addition contains further linking to the following resources:</p>
 
@@ -100,38 +90,13 @@ format may be downloaded <a href="wn31.nt.gz">here</a>. Please refer to the <a h
 as follows</p>
 
 <p><tt>
-    http://wordnet-rdf.princeton.edu/wn31/[9 digit code]-[nvarsp]
+    http://wordnet-rdf.princeton.edu/id/[8 digit code]-[nvarsp]
 </tt></p>
 
-Where the 9-digit code is the identifier of the synset. The first digit 
-of the synset identifies the part-of-speech according to the following table
-
-<table>
-    <tr>
-        <th width="200px">Part-of-speech</th><th>Letter code</th><th>Numeric code</th>
-    </tr>
-    <tr>
-        <td>Noun</td><td>n</td><td>1</td>
-    </tr>
-    <tr>
-        <td>Verb</td><td>v</td><td>2</td>
-    </tr>
-    <tr>
-        <td>Adjective</td><td>a</td><td>3</td>
-    </tr>
-    <tr>
-        <td>Adverb</td><td>r</td><td>4</td>
-    </tr>
-    <tr>
-        <td>Adjective Satellite</td><td>s</td><td>3</td>
-    </tr>
-    <tr>
-        <td>Phrase</td><td>p</td><td>4</td>
-    </tr>
-</table>
+Where the 8-digit code is the identifier of the synset. 
 
 <p>Each file may be downloaded in a given format by adding a file extension to the URL. 
-For example, adding <tt>.json</tt> to the URL gives the JSON-LD version of the word
+For example, adding <tt>.json</tt> to the URL gives the JSON version of the word
 or synset, e.g.,</p>
 
 <p><tt><a href="/id/00001740-n.json">
@@ -144,7 +109,7 @@ or synset, e.g.,</p>
     <li><tt>.html</tt>: HTML+RDFa</li>
     <li><tt>.rdf</tt>: RDF/XML</li>
     <li><tt>.ttl</tt>: Turtle</li>
-    <li><tt>.json</tt>: JSON-LD</li>
+    <li><tt>.json</tt>: JSON</li>
 </ul>
 
 <p>It is also possible to use synset identifiers from WordNet 2.0 and WordNet 3.0.
