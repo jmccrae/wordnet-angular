@@ -130,6 +130,16 @@ fn get_static<'r>(name : String) -> Response<'r> {
             .header(ContentType::PNG)
             .sized_body(File::open("src/princeton.png").unwrap())
             .finalize()
+    } else if name == "verbnet.gif" {
+        Response::build()
+            .header(ContentType::GIF)
+            .sized_body(File::open("src/verbnet.gif").unwrap())
+            .finalize()
+    } else if name == "wikipedia.png" {
+        Response::build()
+            .header(ContentType::PNG)
+            .sized_body(File::open("src/wikipedia.png").unwrap())
+            .finalize()
     } else if name == "wn.css" {
         Response::build()
             .header(ContentType::CSS)

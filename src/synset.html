@@ -14,7 +14,78 @@
             </span>
             <span ng-bind="sense.sense_key" class="sense_key" ng-show="$ctrl.display.sensekeys"></span><span ng-show="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
         </span>
-        <span ng-bind="$ctrl.synset.definition" class="definition"></span>
+        <span ng-if="$ctrl.synset.gloss === undefined" ng-bind="$ctrl.synset.definition" class="definition"></span>
+        <span ng-if="$ctrl.synset.gloss" class="definition">
+            <span ng-repeat="gloss in $ctrl.synset.gloss">
+                <span ng-if="gloss.gloss_type == 'Def'">
+                    <span ng-repeat="word in gloss.words" class="gloss_word">
+                        <a ng-if="word.synset"
+                            target="_self"
+                         ng-href="/id/{{word.synset}}"
+                        >{{word.text}}{{word.sep}}&#x200b;</a>
+                        <a ng-if="word.synset === null && word.glob !== null"
+                            target="_self"
+                            ng-href="/id/{{word.glob}}"
+                        >{{word.text}}{{word.sep}}&#x200b;</a>
+                        <span ng-if="word.synset === null && word.glob === null"
+                        >{{word.text}}{{word.sep}}&#x200b;</span>
+                        <span class="gloss_details">
+                            <span ng-if="word.synset !== null">Synset: <a ng-href="/id/{{word.synset}}">{{word.synset}}</a><br/></span>
+                            <span ng-if="word.glob !== null">Multiword Synset: <a ng-href="/id/{{word.glob}}">{{word.glob}}</a><br/></span>
+                            Lemma: {{word.lemma}}<br/>
+                            PoS: {{word.pos}}<br/>
+                            Tag: {{word.tag}}
+                        </span>
+                    </span>
+                </span>
+            </span>
+            <span ng-repeat="gloss in $ctrl.synset.gloss">
+                <span ng-if="gloss.gloss_type == 'Aux'">
+                    <span ng-repeat="word in gloss.words" class="gloss_word">
+                        <a ng-if="word.synset"
+                            target="_self"
+                         ng-href="/id/{{word.synset}}"
+                        >{{word.text}}{{word.sep}}&#x200b;</a>
+                        <a ng-if="word.synset === null && word.glob !== null"
+                            target="_self"
+                            ng-href="/id/{{word.glob}}"
+                        >{{word.text}}{{word.sep}}&#x200b;</a>
+                        <span ng-if="word.synset === null && word.glob === null"
+                        >{{word.text}}{{word.sep}}&#x200b;</span>
+                        <span class="gloss_details">
+                            <span ng-if="word.synset !== null">Synset: <a ng-href="/id/{{word.synset}}">{{word.synset}}</a><br/></span>
+                            <span ng-if="word.glob !== null">Multiword Synset: <a ng-href="/id/{{word.glob}}">{{word.glob}}</a><br/></span>
+                            Lemma: {{word.lemma}}<br/>
+                            PoS: {{word.pos}}<br/>
+                            Tag: {{word.tag}}
+                        </span>
+                    </span>
+                </span>
+            </span>
+             <span ng-repeat="gloss in $ctrl.synset.gloss">
+                <span ng-if="gloss.gloss_type == 'Ex'">
+                    <span ng-repeat="word in gloss.words" class="gloss_word">
+                        <a ng-if="word.synset"
+                            target="_self"
+                         ng-href="/id/{{word.synset}}"
+                        >{{word.text}}{{word.sep}}&#x200b;</a>
+                        <a ng-if="word.synset === null && word.glob !== null"
+                            target="_self"
+                            ng-href="/id/{{word.glob}}"
+                        >{{word.text}}{{word.sep}}&#x200b;</a>
+                        <span ng-if="word.synset === null && word.glob === null"
+                        >{{word.text}}{{word.sep}}&#x200b;</span>
+                        <span class="gloss_details">
+                            <span ng-if="word.synset !== null">Synset: <a ng-href="/id/{{word.synset}}">{{word.synset}}</a><br/></span>
+                            <span ng-if="word.glob !== null">Multiword Synset: <a ng-href="/id/{{word.glob}}">{{word.glob}}</a><br/></span>
+                            Lemma: {{word.lemma}}<br/>
+                            PoS: {{word.pos}}<br/>
+                            Tag: {{word.tag}}
+                        </span>
+                    </span>
+                </span>
+            </span>
+         </span>
         <div class="foreign">
             <div ng-repeat="(lang, words) in $ctrl.synset.foreign">
                 <img ng-src="/flag/{{lang}}" ng-if="$ctrl.display['lang_'+lang]"/>
@@ -40,6 +111,14 @@
             <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn15">WordNet 1.5: {{id}}</li>
         </ul>
 
+        <div ng-repeat="link in $ctrl.synset.links">
+            <a ng-href="https://verbs.colorado.edu/verb-index/vn/{{link.target}}.php" 
+                ng-if="link.link_type === 'VerbNet'"
+                class="pull-right"><img src="/static/verbnet.gif" width="30px"/></a>
+            <a ng-href="https://en.wikipedia.org/wiki/{{link.target}}" 
+                ng-if="link.link_type === 'Wikipedia'"
+                class="pull-right"><img src="/static/wikipedia.png" width="30px"/></a>
+        </div>
         <div ng-if="$ctrl.show_relations" class="relations">
             <relation display="$ctrl.display"
                 fullname="Hypernyms"

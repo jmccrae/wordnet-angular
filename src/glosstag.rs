@@ -14,7 +14,8 @@ pub struct GlossTagWord {
     sep : String,
     pos : Option<String>,
     tag : Option<String>,
-    synset : Option<String>
+    synset : Option<String>,
+    glob : Option<String>
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -47,8 +48,9 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
     let mut current_sent = Vec::new();
     let mut current_word = GlossTagWord { 
         text: "".to_string(), lemma: None, sep: "".to_string(),
-        pos: None, tag: None, synset: None };        
+        pos: None, tag: None, synset: None, glob: None };        
     let mut all_sents = HashMap::new();
+    let mut in_glob = false;
 
     for e in parse {
         match e {
@@ -72,27 +74,35 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                     current_sent = Vec::new();
                 } else if name.local_name == "ex" {
                     current_sent = Vec::new();
-                } else if name.local_name == "wf" {
+                } else if name.local_name == "wf" || name.local_name == "cf" {
                     let lemma = attr_value(&attributes, "lemma");
                     let pos = attr_value(&attributes, "pos");
                     let tag = attr_value(&attributes, "tag");
                     let sep = attr_value(&attributes, "sep")
-                        .unwrap_or("".to_string());
+                        .unwrap_or(" ".to_string());
                     current_word = GlossTagWord {
                         text : "".to_string(),
                         lemma: lemma,
                         pos: pos,
                         tag: tag,
                         sep: sep,
-                        synset: None
+                        synset: None,
+                        glob: None
                     };
+                } else if name.local_name == "glob" {
+                    in_glob = true;
                 } else if name.local_name == "id" {
                     let sk = attr_value(&attributes, "sk") 
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "id does not have sk"))?;
                     sense_keys.get(&sk)
                         .map(|ss| {
-                            current_word.synset = Some(ss.to_string()) });
+                            if in_glob {
+                                current_word.glob = Some(ss.to_string())
+                            } else {
+                                current_word.synset = Some(ss.to_string()) 
+                            }
+                        });
                 }
             },
             Ok(XmlEvent::EndElement { name, .. }) => {
@@ -121,7 +131,9 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                         words: current_sent.clone(),
                         gloss_type: GlossType::Ex
                     });
-                } else if name.local_name == "wf" {
+                } else if name.local_name == "glob" {
+                    in_glob = false;
+                } else if name.local_name == "wf" || name.local_name == "cf" {
                     current_sent.push(current_word.clone());
                 }
                 

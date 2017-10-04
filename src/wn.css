@@ -162,4 +162,36 @@ div.option_panel_internal {
     background-color: black !important;
     color:#eee;
 }
+.gloss_word {
+    position: relative;
+    display: inline-block;
+}
 
+/* Tooltip text */
+.gloss_word .gloss_details {
+    visibility: hidden;
+    width: 200px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+ 
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.gloss_word:hover .gloss_details {
+    visibility: visible;
+}
+
+.gloss_word a {
+    text-decoration: none;
+    color: #777;
+}
+
+.definition:hover a {
+    border-bottom: 1px dotted #999;
+}
