@@ -24,6 +24,10 @@ use clap::{App, Arg, ArgMatches};
 use std::process::exit;
 use rocket::State;
 use rocket::Response;
+use rocket::Request;
+use rocket::request::{FromRequest,Outcome};
+use rocket::http::hyper::header::Location;
+use rocket::Outcome::Success;
 use rocket::http::{ContentType, Status};
 use std::io::Cursor;
 use std::fs::File;
@@ -78,6 +82,20 @@ fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String)
                 })?))
        .finalize())
 }
+
+#[get("/rdf/<index>/<name>")]
+fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String) 
+        -> Result<Response<'r>, &'static str> {
+    Ok(Response::build()
+       .header(ContentType::new("application","rdf+xml"))
+       .sized_body(Cursor::new(
+            state.handlebars.render("rdfxml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name)).map_err(|e| {
+                    eprintln!("{}", e);
+                    "Could not apply template"
+                })?))
+       .finalize())
+}
+
 
 
 #[get("/xml/<index>/<name>")]
@@ -258,26 +276,101 @@ fn autocomplete_lemma(index : String, key : String,
     serde_json::to_string(&results).map_err(|_| "Could not translate to JSON")
 }
 
-#[get("/lemma/<_key>")]
-fn lemma<'r>(_key : String) -> Response<'r> { index() }
-#[get("/id/<_key>")]
-fn id<'r>(_key : String) -> Response<'r> { index() }
-#[get("/ili/<_key>")]
-fn ili<'r>(_key : String) -> Response<'r> { index() }
-#[get("/sense_key/<_key>")]
-fn sense_key<'r>(_key : String) -> Response<'r> { index() }
-#[get("/pwn30/<_key>")]
-fn pwn30<'r>(_key : String) -> Response<'r> { index() }
-#[get("/pwn21/<_key>")]
-fn pwn21<'r>(_key : String) -> Response<'r> { index() }
-#[get("/pwn20/<_key>")]
-fn pwn20<'r>(_key : String) -> Response<'r> { index() }
-#[get("/pwn171/<_key>")]
-fn pwn171<'r>(_key : String) -> Response<'r> { index() }
-#[get("/pwn17/<_key>")]
-fn pwn17<'r>(_key : String) -> Response<'r> { index() }
-#[get("/pwn16/<_key>")]
-fn pwn16<'r>(_key : String) -> Response<'r> { index() }
+enum ContentNegotiation { Html, RdfXml, Turtle, Json }
+
+impl<'a,'r> FromRequest<'a,'r> for ContentNegotiation {
+    type Error = String;
+    fn from_request(request: &'a Request<'r>) -> Outcome<ContentNegotiation, String> {
+        for value in request.headers().get("Accepts") {
+            if value.starts_with("text/html") {
+                return Success(ContentNegotiation::Html);
+            } else if value.starts_with("application/rdf+xml") {
+                return Success(ContentNegotiation::RdfXml);
+            } else if value.starts_with("text/turtle") {
+                return Success(ContentNegotiation::Turtle);
+            } else if value.starts_with("application/x-turtle") {
+                return Success(ContentNegotiation::Turtle);
+            } else if value.starts_with("application/json") {
+                return Success(ContentNegotiation::Json);
+            } else if value.starts_with("application/javascript") {
+                return Success(ContentNegotiation::Json);
+            }
+        }
+        Success(ContentNegotiation::Html)
+    }
+}
+    
+
+fn negotiated<'r>(idx : &'static str, key2 : String, neg2 : ContentNegotiation) -> Response<'r> {
+    let (key,neg) = if key2.ends_with(".rdf") {
+        (key2[0..(key2.len()-4)].to_string(), ContentNegotiation::RdfXml)
+    } else if key2.ends_with(".ttl") {
+        (key2[0..(key2.len()-4)].to_string(), ContentNegotiation::Turtle)
+    } else if key2.ends_with(".json") {
+        (key2[0..(key2.len()-5)].to_string(), ContentNegotiation::Json)
+    } else if key2.ends_with(".html") {
+        (key2[0..(key2.len()-5)].to_string(), ContentNegotiation::Html)
+    } else {
+        (key2, neg2)
+    };
+    match neg {
+        ContentNegotiation::Html => { index() },
+        ContentNegotiation::RdfXml => {
+            Response::build()
+                .status(Status::SeeOther)
+                .header(Location(format!("http://wordnet-rdf.princeton.edu/rdf/{}/{}", idx, key)))
+                .finalize()
+        },
+        ContentNegotiation::Turtle => {
+            Response::build()
+                .status(Status::SeeOther)
+                .header(Location(format!("http://wordnet-rdf.princeton.edu/ttl/{}/{}", idx, key)))
+                .finalize()
+        },
+
+        ContentNegotiation::Json => {
+            Response::build()
+                .status(Status::SeeOther)
+                .header(Location(format!("http://wordnet-rdf.princeton.edu/json/{}/{}", idx, key)))
+                .finalize()
+        }
+    }
+}
+
+#[get("/lemma/<key>")]
+fn lemma<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("lemma", key, neg) }
+#[get("/id/<key>")]
+fn id<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("id", key, neg) }
+#[get("/ili/<key>")]
+fn ili<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("ili", key, neg) }
+#[get("/sense_key/<key>")]
+fn sense_key<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("sense_key", key, neg) }
+#[get("/pwn30/<key>")]
+fn pwn30<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn30", key, neg) }
+#[get("/pwn21/<key>")]
+fn pwn21<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn21", key, neg) }
+#[get("/pwn20/<key>")]
+fn pwn20<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn20", key, neg) }
+#[get("/pwn171/<key>")]
+fn pwn171<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn171", key, neg) }
+#[get("/pwn17/<key>")]
+fn pwn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn17", key, neg) }
+#[get("/pwn16/<key>")]
+fn pwn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn16", key, neg) }
+#[get("/wn31/<key>")]
+fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("id", key, neg) }
+#[get("/wn30/<key>")]
+fn wn30<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn30", key, neg) }
+#[get("/wn21/<key>")]
+fn wn21<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn21", key, neg) }
+#[get("/wn20/<key>")]
+fn wn20<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn20", key, neg) }
+#[get("/wn171/<key>")]
+fn wn171<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn171", key, neg) }
+#[get("/wn17/<key>")]
+fn wn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn17", key, neg) }
+#[get("/wn16/<key>")]
+fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn16", key, neg) }
 
 #[get("/")]
 fn index<'r>() -> Response<'r> {
@@ -286,6 +379,38 @@ fn index<'r>() -> Response<'r> {
         //.sized_body(Cursor::new(include_str!("index.html")))
         .finalize()
 }
+
+#[get("/about")]
+fn about<'r>() -> Response<'r> {
+    Response::build()
+        .sized_body(File::open("src/about.html").unwrap())
+        .finalize()
+}
+
+#[get("/license")]
+fn license<'r>() -> Response<'r> {
+    Response::build()
+        .sized_body(File::open("src/license.html").unwrap())
+        .finalize()
+}
+
+
+#[get("/ontology")]
+fn ontology<'r>() -> Response<'r> {
+    Response::build()
+        .header(ContentType::new("application","rdf+xml"))
+        .sized_body(File::open("src/ontology.rdf").unwrap())
+        .finalize()
+}
+
+#[get("/ontology.html")]
+fn ontology_html<'r>() -> Response<'r> {
+    Response::build()
+        .sized_body(File::open("src/ontology.html").unwrap())
+        .finalize()
+}
+
+        
 
 struct Config {
     wn_file : String
@@ -321,7 +446,6 @@ fn long_pos(h : &handlebars::Helper,
         .and_then(|v| {
             let v2 = v.value().as_str()
                 .ok_or_else(|| handlebars::RenderError::new("No parameter value for pos long"))?;
-            eprintln!("{}", v2);
             wordnet::PartOfSpeech::from_str(v2)
                 .map_err(|e| handlebars::RenderError::new(&format!("{}", e)))
         })?;
@@ -336,6 +460,8 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
         .expect("Could not load xml.hbs");
     handlebars.register_template_string("ttl", include_str!("ttl.hbs"))
         .expect("Could not load ttl.hbs");
+    handlebars.register_template_string("rdfxml", include_str!("rdfxml.hbs"))
+        .expect("Could not load rdfxml.hbs");
     handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
     handlebars.register_helper("long_pos", Box::new(long_pos));
     eprintln!("Loading WordNet data");
@@ -414,10 +540,13 @@ fn main() {
                     rocket::ignite()
                         .manage(state)
                         .mount("/", routes![
-                                get_xml, get_ttl,
+                                about, ontology, ontology_html, license,
+                                get_xml, get_ttl, get_rdf,
                                 index, synset, get_flag,
                                 autocomplete_lemma, get_static,
                                 lemma, id, ili, sense_key, 
+                                wn30, wn21, wn20, wn17,
+                                wn171, wn16, wn31,
                                 pwn30, pwn21, pwn20, pwn17,
                                 pwn171, pwn16]).launch();
                 },

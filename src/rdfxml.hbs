@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE rdf:RDF [
+  <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <!ENTITY dc "http://purl.org/dc/terms/">
+  <!ENTITY ili "http://ili.globalwordnet.org/ili/">
+  <!ENTITY lime "http://www.w3.org/ns/lemon/lime#">
+  <!ENTITY ontolex "http://www.w3.org/ns/lemon/ontolex#">
+  <!ENTITY owl "http://www.w3.org/2002/07/owl#">
+  <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
+  <!ENTITY schema "http://schema.org/">
+  <!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
+  <!ENTITY synsem "http://www.w3.org/ns/lemon/synsem#">
+  <!ENTITY wn "http://wordnet-rdf.princeton.edu/ontology#">
+  <!ENTITY wordnetlicense "http://wordnet.princeton.edu/wordnet/license/">
+  <!ENTITY pwn "http://wordnet-rdf.princeton.edu/rdf/">
+]>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:dc="http://purl.org/dc/terms/"
+         xmlns:ili="http://ili.globalwordnet.org/ili/"
+         xmlns:lime="http://www.w3.org/ns/lemon/lime#"
+         xmlns:ontolex="http://www.w3.org/ns/lemon/ontolex#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:schema="http://schema.org/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:synsem="http://www.w3.org/ns/lemon/synsem#"
+         xmlns:wn="http://wordnet-rdf.princeton.edu/ontology#"
+         xmlns:wordnetlicense="http://wordnet.princeton.edu/wordnet/license/"
+         xmlns:pwn="http://wordnet-rdf.princeton.edu/rdf/">
+{{#each entries}}
+<ontolex:LexicalEntry rdf:about="#{{lemma_escape @key}}">
+    <ontolex:canonicalForm rdf:parseType="Resource">
+        <ontolex:writtenRep xml:lang="en">{{this.0.lemmas.0.lemma}}</ontolex:writtenRep>
+    </ontolex:canonicalForm>
+    {{#each this}}    <ontolex:sense rdf:resource="#{{lemma_escape lemmas.0.lemma}}-{{id}}"/>{{/each}}
+{{#each this.0.lemmas.0.subcats}}    <synsem:synBehavior rdf:parseType="Resource">
+      <rdfs:label xml:lang="en">{{this}}</rdfs:label>
+    </synsem:synBehavior>
+{{/each}} 
+    <wn:partOfSpeech rdf:resource="&wn;{{long_pos this.0.pos}}"/>
+  </ontolex:LexicalEntry>
+{{/each}}
+{{#each entries}}{{#each this}}
+  <ontolex:LexicalSense rdf:about="#{{lemma_escape lemmas.0.lemma}}-{{id}}">
+{{#each relations}}{{#if src_word}}     <wn:{{rel_type}} rdf:resource="&pwn;lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}"/>
+{{/if}}{{/each}}
+  </ontolex:LexicalSense>
+{{/each}}{{/each}}
+{{#each synsets}}
+  <ontolex:LexicalConcept rdf:about="&pwn;id/{{id}}">
+    <owl:sameAs rdf:resource="&ili;{{ili}}"/>
+    <wn:partOfSpeech rdf:resource="&wn;{{long_pos pos}}"/>
+    <dc:subject>{{subject}}</dc:subject>
+    <wn:definition rdf:parseType="Resource">
+      <rdf:value xml:lang="en">{{definition}}</rdf:value>
+    </wn:definition>
+{{#each relations}}{{#if src_word}}{{else}}    <wn:{{rel_type}} rdf:resource="&pwn;id/{{target}}"/>
+{{/if}}{{/each}}
+  </ontolex:LexicalConcept>
+{{/each}}
+</rdf:RDF>

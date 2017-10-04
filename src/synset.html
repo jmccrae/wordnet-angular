@@ -114,10 +114,12 @@
         <div ng-repeat="link in $ctrl.synset.links">
             <a ng-href="https://verbs.colorado.edu/verb-index/vn/{{link.target}}.php" 
                 ng-if="link.link_type === 'VerbNet'"
-                class="pull-right"><img src="/static/verbnet.gif" width="30px"/></a>
+                class="pull-right"><img src="/static/verbnet.gif" 
+                width="30px" ng-title="VerbNet: {{link.target}}"/></a>
             <a ng-href="https://en.wikipedia.org/wiki/{{link.target}}" 
                 ng-if="link.link_type === 'Wikipedia'"
-                class="pull-right"><img src="/static/wikipedia.png" width="30px"/></a>
+                class="pull-right"><img src="/static/wikipedia.png" 
+                width="30px" ng-title="Wikipedia: {{link.target}}"/></a>
         </div>
         <div ng-if="$ctrl.show_relations" class="relations">
             <relation display="$ctrl.display"

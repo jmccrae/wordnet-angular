@@ -43,7 +43,11 @@ angular.module('app').controller('SearchController',
 
     if(m) {
         self.index = m[1];
-        self.selectedItem = { item: m[2], display: m[2] };
+        if(m[2].endsWith(".html")) {
+            self.selectedItem = { item: m[2].substring(0, m[2].length - 5), display: m[2] };
+        } else {
+            self.selectedItem = { item: m[2], display: m[2] };
+        }
         self.selectedItemChange(self.selectedItem);
     }
     self.querySearch = function (query) {
