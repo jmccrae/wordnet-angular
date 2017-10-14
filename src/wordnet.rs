@@ -17,6 +17,9 @@ use links::{Link,load_links};
 use stable_skiplist::Bound::{Included, Unbounded};
 use stable_skiplist::ordered_skiplist::{Iter};
 use std::iter::Take;
+use sled;
+use sled::Tree;
+use serde_json;
 
 /// A WordNet part of speech
 #[derive(Clone,Debug)]
@@ -227,6 +230,7 @@ pub struct Relation {
 }
 
 pub struct WordNet {
+    synsets2 : Tree,
     synsets : HashMap<WNKey, Synset>,
     by_lemma : HashMap<String, Vec<WNKey>>,
     by_ili : HashMap<String, WNKey>,
@@ -241,7 +245,23 @@ pub struct WordNet {
 
 
 impl WordNet {
-    pub fn get_synset(&self, key : &WNKey) -> Option<&Synset> { self.synsets.get(key) }
+    pub fn set_synsets(&mut self, values : HashMap<WNKey, Synset>) -> Result<(),WordNetLoadError> {
+        for (k, v) in values {
+            let key_str = k.to_string();
+            let val_str = serde_json::to_string(&v)?;
+            self.synsets2.set(Vec::from(key_str.as_bytes()),
+                              Vec::from(val_str.as_bytes()));
+        }
+        Ok(())
+    }
+            
+    pub fn get_synset(&self, key : &WNKey) -> Option<Synset> { 
+        let key_u8 = key.to_string();
+        eprintln!("Sled get synset");
+        self.synsets2.get(key_u8.as_bytes()).map(|data|
+            serde_json::from_slice(data.as_slice())
+                .expect("Database corruption"))
+    }
     pub fn get_by_lemma(&self, lemma : &str) -> Vec<&Synset> { 
         let v = Vec::new();
         self.by_lemma.get(lemma).unwrap_or(&v)
@@ -260,8 +280,16 @@ impl WordNet {
         Ok(map.get(id).and_then(|l| self.synsets.get(l)))
     }
     pub fn list_by_id(&self, key : &WNKey, 
-                      limit : usize) -> Take<Iter<WNKey>> {
-        self.id_skiplist.range(Included(key), Unbounded).take(limit)
+                      limit : usize) -> Vec<WNKey> {
+        let key_str = key.to_string();
+        eprintln!("Sled list by ID");
+        self.synsets2.scan(key_str.as_bytes()).map(|i|
+            WNKey::from_str(&String::from_utf8(i.0).expect("Database corrupt"))
+                .expect("Database corrupt"))
+            .take(limit)
+            .collect()
+        
+//        self.id_skiplist.range(Included(key), Unbounded).take(limit)
     }
     pub fn list_by_lemma(&self, lemma : &String,
                           limit : usize) -> Take<Iter<String>> {
@@ -526,8 +554,11 @@ impl WordNet {
                 Err(e) => { return Err(WordNetLoadError::Xml(e)); }
             }
         }
-        let mut wordnet = WordNet{
-            synsets: synsets,
+        let mut wordnet = WordNet {
+            synsets2: sled::Config::default()
+                .path("sled/synsets".to_owned())
+                .tree(),                
+            synsets: synsets.clone(),
             by_lemma: HashMap::new(),
             by_ili: HashMap::new(),
             by_sense_key: HashMap::new(),
@@ -538,6 +569,7 @@ impl WordNet {
             sense_key_skiplist: OrderedSkipList::new(),
             old_skiplist: HashMap::new()
         };
+        wordnet.set_synsets(synsets)?;
         build_indexes(&mut wordnet);
         build_tabs(&mut wordnet)?;
         build_glosstags(&mut wordnet)?;
@@ -703,6 +735,11 @@ quick_error! {
         }
         Schema(msg : &'static str) {
             description(msg)
+        }
+        JsonSerialization(err : ::serde_json::Error) {
+            from()
+            display("JSON error: {}", err)
+            cause(err)
         }
         BadKey(msg : String) {
             description(msg)
