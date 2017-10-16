@@ -2,10 +2,10 @@ use std::fs::File;
 use std::path::Path;
 use std::collections::HashMap;
 use std::io::{BufRead,BufReader};
-use wordnet::{WNKey, WordNetLoadError};
+use wordnet::{WNKey, WordNetLoadError, WordNet};
 use std::str::FromStr;
 
-pub fn load_omwn<P: AsRef<Path>>(p : P, wn30s : &HashMap<WNKey, WNKey>) 
+pub fn load_omwn<P: AsRef<Path>>(p : P, wordnet : &WordNet)
         -> Result<HashMap<WNKey, Vec<String>>, WordNetLoadError> {
     let file = BufReader::new(File::open(p)?);
     let mut result = HashMap::new();
@@ -19,7 +19,9 @@ pub fn load_omwn<P: AsRef<Path>>(p : P, wn30s : &HashMap<WNKey, WNKey>)
                    elems.next().map(|t| {
                         elems.next().map(|v| {
                             if t.ends_with("lemma") {
-                                wn30s.get(&wn30key).map(|id| {
+                                wordnet.get_id_by_old_id("wn30", &wn30key)
+                                  .expect("Need WordNet 3.0 mapping to load OMWN")
+                                  .map(|id| {
                                     result.entry(id.clone())
                                         .or_insert_with(|| Vec::new())
                                         .push(v.to_string());

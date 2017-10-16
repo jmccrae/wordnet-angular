@@ -4,7 +4,7 @@ use std::io::{BufReader};
 use xml::reader::{EventReader, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
-use wordnet::{WNKey, WordNetLoadError};
+use wordnet::{WNKey, WordNetLoadError, WordNet};
 use std::str::FromStr;
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -37,8 +37,7 @@ fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String
 
 
 pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
-        wn30_idx : &HashMap<WNKey, WNKey>,
-        sense_keys: &HashMap<String, WNKey>) -> Result<GlossTagCorpus, WordNetLoadError> {
+        wordnet : &WordNet) -> Result<GlossTagCorpus, WordNetLoadError> {
     let file = BufReader::new(File::open(path)?);
 
     let parse = EventReader::new(file);
@@ -64,7 +63,8 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                             "bad wn30 id"))?;
                     let num : String = wn30id.chars().skip(1).collect();
                     let id = WNKey::from_str(&format!("{}-{}", num ,pos))?;
-                    current_id = wn30_idx.get(&id)
+                    current_id = wordnet.get_id_by_old_id("wn30", &id)
+                        .expect("Loading gloss tags without WN 3.0 index")
                         .map(|x| x.clone());
                 } else if name.local_name == "gloss" {
                     current_sents = Vec::new();
@@ -95,7 +95,7 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                     let sk = attr_value(&attributes, "sk") 
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "id does not have sk"))?;
-                    sense_keys.get(&sk)
+                    wordnet.get_id_by_sense_key(&sk)
                         .map(|ss| {
                             if in_glob {
                                 current_word.glob = Some(ss.to_string())
