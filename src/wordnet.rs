@@ -17,6 +17,9 @@ use links::{Link,load_links};
 use stable_skiplist::Bound::{Included, Unbounded};
 use stable_skiplist::ordered_skiplist::{Iter};
 use std::iter::Take;
+use sled;
+use sled::Tree;
+use serde_json;
 
 /// A WordNet part of speech
 #[derive(Clone,Debug)]
@@ -227,6 +230,7 @@ pub struct Relation {
 }
 
 pub struct WordNet {
+    synsets2 : Tree,
     synsets : HashMap<WNKey, Synset>,
     by_lemma : HashMap<String, Vec<WNKey>>,
     by_ili : HashMap<String, WNKey>,
@@ -241,27 +245,84 @@ pub struct WordNet {
 
 
 impl WordNet {
-    pub fn get_synset(&self, key : &WNKey) -> Option<&Synset> { self.synsets.get(key) }
+    pub fn set_synsets(&mut self, values : HashMap<WNKey, Synset>) -> Result<(),WordNetLoadError> {
+        for (k, v) in values {
+            self.set_synset(k, v)?;
+        }
+        Ok(())
+    }
+
+    pub fn set_synset(&mut self, key : WNKey, synset : Synset) -> Result<(),WordNetLoadError> {
+        let key_str = key.to_string();
+        let val_str = serde_json::to_string(&synset)?;
+        self.synsets2.set(Vec::from(key_str.as_bytes()),
+                          Vec::from(val_str.as_bytes()));
+        Ok(())
+    }
+         
+    pub fn synsets(&self) -> ::std::collections::hash_map::Values<WNKey, Synset> {
+        self.synsets.values()
+    }
+            
+    pub fn get_synset(&self, key : &WNKey) -> Option<Synset> { 
+        let key_u8 = key.to_string();
+        eprintln!("Sled get synset");
+        self.synsets2.get(key_u8.as_bytes()).map(|data|
+            serde_json::from_slice(data.as_slice())
+                .expect("Database corruption"))
+    }
     pub fn get_by_lemma(&self, lemma : &str) -> Vec<&Synset> { 
         let v = Vec::new();
         self.by_lemma.get(lemma).unwrap_or(&v)
             .iter().flat_map(|l| self.synsets.get(l)).collect()
     }
+    pub fn get_id_by_ili(&self, ili : &str) -> Option<&WNKey> {
+        self.by_ili.get(ili)
+    }
     pub fn get_by_ili(&self, ili : &str) -> Option<&Synset> {
         self.by_ili.get(ili)
             .and_then(|l| self.synsets.get(l))
+    }
+    pub fn get_id_by_sense_key(&self, sense_key : &str) -> Option<&WNKey> {
+        self.by_sense_key.get(sense_key)
     }
     pub fn get_by_sense_key(&self, sense_key : &str) -> Option<&Synset> {
         self.by_sense_key.get(sense_key)
             .and_then(|l| self.synsets.get(l))
     }
+    pub fn get_id_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<&WNKey>,&'static str> {
+        let map = self.by_old_id.get(index).ok_or("No index")?;
+        Ok(map.get(id))
+    }
     pub fn get_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<&Synset>,&'static str> {
         let map = self.by_old_id.get(index).ok_or("No index")?;
         Ok(map.get(id).and_then(|l| self.synsets.get(l)))
     }
+    pub fn set_old_id(&mut self, index : &str, id : &WNKey, old_id : &WNKey) -> Result<(),&'static str> {
+        self.old_skiplist.entry(index.to_owned())
+            .or_insert_with(|| OrderedSkipList::new())
+            .insert(old_id.clone());
+        self.by_old_id.entry(index.to_owned())
+            .or_insert_with(|| HashMap::new())
+            .insert(old_id.clone(), id.clone());
+        self.synsets.entry(id.clone())
+            .or_insert_with(|| panic!("ILI not in WordNet??"))
+            .old_keys.entry(index.to_string())
+            .or_insert_with(|| Vec::new())
+            .push(old_id.clone());
+        Ok(())
+    }
     pub fn list_by_id(&self, key : &WNKey, 
-                      limit : usize) -> Take<Iter<WNKey>> {
-        self.id_skiplist.range(Included(key), Unbounded).take(limit)
+                      limit : usize) -> Vec<WNKey> {
+        let key_str = key.to_string();
+        eprintln!("Sled list by ID");
+        self.synsets2.scan(key_str.as_bytes()).map(|i|
+            WNKey::from_str(&String::from_utf8(i.0).expect("Database corrupt"))
+                .expect("Database corrupt"))
+            .take(limit)
+            .collect()
+        
+//        self.id_skiplist.range(Included(key), Unbounded).take(limit)
     }
     pub fn list_by_lemma(&self, lemma : &String,
                           limit : usize) -> Take<Iter<String>> {
@@ -526,8 +587,11 @@ impl WordNet {
                 Err(e) => { return Err(WordNetLoadError::Xml(e)); }
             }
         }
-        let mut wordnet = WordNet{
-            synsets: synsets,
+        let mut wordnet = WordNet {
+            synsets2: sled::Config::default()
+                .path("sled/synsets".to_owned())
+                .tree(),                
+            synsets: synsets.clone(),
             by_lemma: HashMap::new(),
             by_ili: HashMap::new(),
             by_sense_key: HashMap::new(),
@@ -538,13 +602,12 @@ impl WordNet {
             sense_key_skiplist: OrderedSkipList::new(),
             old_skiplist: HashMap::new()
         };
+        wordnet.set_synsets(synsets)?;
         build_indexes(&mut wordnet);
         build_tabs(&mut wordnet)?;
         build_glosstags(&mut wordnet)?;
         build_omwn(&mut wordnet)?;
-        load_links(&wordnet.by_old_id["pwn20"],
-                   &wordnet.by_ili,
-                   &mut wordnet.synsets);
+        load_links(&mut wordnet)?;
         //eprintln!("size_of synsets: {}", wordnet.synsets.len());
         //eprintln!("size_of by_lemma: {}", wordnet. by_lemma.len());
         //eprintln!("size_of by_ili: {}", wordnet.by_ili.len());
@@ -562,16 +625,14 @@ impl WordNet {
 
 fn build_glosstags(wordnet : &mut WordNet)
          -> Result<(), WordNetLoadError> {
-    let ref wn30_idx = wordnet.by_old_id["pwn30"];
-    let ref sense_keys = wordnet.by_sense_key;
     eprintln!("Loading gloss tags (adj)");
-    let mut result = read_glosstag_corpus("data/merged/adj.xml", wn30_idx, sense_keys)?;
+    let mut result = read_glosstag_corpus("data/merged/adj.xml", &wordnet)?;
     eprintln!("Loading gloss tags (adv)");
-    result.extend(read_glosstag_corpus("data/merged/adv.xml", wn30_idx, sense_keys)?);
+    result.extend(read_glosstag_corpus("data/merged/adv.xml", &wordnet)?);
     eprintln!("Loading gloss tags (noun)");
-    result.extend(read_glosstag_corpus("data/merged/noun.xml", wn30_idx, sense_keys)?);
+    result.extend(read_glosstag_corpus("data/merged/noun.xml", &wordnet)?);
     eprintln!("Loading gloss tags (verb)");
-    result.extend(read_glosstag_corpus("data/merged/verb.xml", wn30_idx, sense_keys)?);
+    result.extend(read_glosstag_corpus("data/merged/verb.xml", &wordnet)?);
     for (k,v) in result.iter() {
         wordnet.synsets.get_mut(k)
             .map(|x| {
@@ -583,10 +644,7 @@ fn build_glosstags(wordnet : &mut WordNet)
 
 fn build_tab<P : AsRef<Path>>(file : P, 
     index : &str,
-    by_ili : &HashMap<String, WNKey>,
-    synsets : &mut HashMap<WNKey, Synset>,
-    by_tab : &mut HashMap<WNKey, WNKey>,
-    skiplist : &mut OrderedSkipList<WNKey>) -> Result<(),WordNetLoadError> {
+    wordnet : &mut WordNet) -> Result<(),WordNetLoadError> {
     let file = BufReader::new(File::open(file)?);
     for line in file.lines() {
         let line = line?;
@@ -595,15 +653,13 @@ fn build_tab<P : AsRef<Path>>(file : P,
             Some(ili) => {
                 match elems.next() {
                     Some(id) => {
-                        skiplist.insert(WNKey::from_str(id)?);
-                        match by_ili.get(ili) {
+                        let wnid2 = wordnet.get_id_by_ili(ili).map(|x| x.clone());
+                        match wnid2 {
                             Some(wnid) => {
-                                by_tab.insert(WNKey::from_str(id)?, wnid.clone());
-                                synsets.entry(wnid.clone())
-                                    .or_insert_with(|| panic!("ILI not in WordNet??"))
-                                    .old_keys.entry(index.to_string())
-                                    .or_insert_with(|| Vec::new())
-                                    .push(WNKey::from_str(id)?);
+                                wordnet.set_old_id(index, 
+                                    &wnid,
+                                    &WNKey::from_str(id)?)
+                                .map_err(|e| WordNetLoadError::BadKey(e.to_owned()))?;
                             },
                             None => {}
                         };
@@ -638,13 +694,8 @@ fn build_tabs(wordnet : &mut WordNet) -> Result<(),WordNetLoadError> {
     for tab in ["pwn15", "pwn16", "pwn17", "pwn171", "pwn20",
                 "pwn21", "pwn30"].iter() {
         eprintln!("Loading Tab {}", tab);
-        let mut map = HashMap::new();
-        let mut list = OrderedSkipList::new();
         let path = format!("data/ili-map-{}.tab", tab);
-        build_tab(path, tab, &wordnet.by_ili, 
-            &mut wordnet.synsets, &mut map, &mut list)?;
-        wordnet.by_old_id.insert(tab.to_string(), map);
-        wordnet.old_skiplist.insert(tab.to_string(), list);
+        build_tab(path, tab, wordnet)?;
     }
     Ok(())
 }
@@ -670,7 +721,7 @@ fn build_omwn(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
             x => x
         };
        let omwn = load_omwn(format!("data/wns/{}/wn-data-{}.tab", project, lang),
-            &wordnet.by_old_id["pwn30"])?;
+            &wordnet)?;
        for (key, values) in omwn.iter() {
            match wordnet.synsets.get_mut(&key) {
                Some(s) => {
@@ -703,6 +754,11 @@ quick_error! {
         }
         Schema(msg : &'static str) {
             description(msg)
+        }
+        JsonSerialization(err : ::serde_json::Error) {
+            from()
+            display("JSON error: {}", err)
+            cause(err)
         }
         BadKey(msg : String) {
             description(msg)
