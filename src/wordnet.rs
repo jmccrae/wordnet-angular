@@ -230,21 +230,29 @@ pub struct Relation {
 }
 
 pub struct WordNet {
-    synsets2 : Tree,
-    synsets : HashMap<WNKey, Synset>,
-    by_lemma : HashMap<String, Vec<WNKey>>,
-    by_ili : HashMap<String, WNKey>,
-    by_sense_key : HashMap<String, WNKey>,
-    by_old_id : HashMap<String, HashMap<WNKey, WNKey>>,
-    id_skiplist : OrderedSkipList<WNKey>,
-    lemma_skiplist : OrderedSkipList<String>,
-    ili_skiplist : OrderedSkipList<String>,
-    sense_key_skiplist : OrderedSkipList<String>,
-    old_skiplist : HashMap<String, OrderedSkipList<WNKey>>
+    synsets : Tree,
+    by_lemma : Tree,
+    by_ili : Tree,
+    by_sense_key : Tree,
+    by_old_id : HashMap<String, Tree>
 }
 
 
 impl WordNet {
+    pub fn new() -> WordNet {
+        WordNet {
+            synsets: sled::Config::default()
+                .path("sled/synsets".to_owned()).tree(),
+            by_lemma: sled::Config::default()
+                .path("sled/by_lemma".to_owned()).tree(),
+            by_ili: sled::Config::default()
+                .path("sled/by_ili".to_owned()).tree(),
+            by_sense_key: sled::Config::default()
+                .path("sled/by_sense_key".to_owned()).tree(),
+            by_old_id: HashMap::new()
+        }
+    }
+ 
     pub fn set_synsets(&mut self, values : HashMap<WNKey, Synset>) -> Result<(),WordNetLoadError> {
         for (k, v) in values {
             self.set_synset(k, v)?;
@@ -255,92 +263,142 @@ impl WordNet {
     pub fn set_synset(&mut self, key : WNKey, synset : Synset) -> Result<(),WordNetLoadError> {
         let key_str = key.to_string();
         let val_str = serde_json::to_string(&synset)?;
-        self.synsets2.set(Vec::from(key_str.as_bytes()),
+        self.synsets.set(Vec::from(key_str.as_bytes()),
                           Vec::from(val_str.as_bytes()));
+        //self.by_ili.set(Vec::from(synset.ili.as_bytes()),
+        //            Vec::from(key_str.as_bytes()));
+        //for sense in synset.lemmas {
+        //    let lemmas = Vec::new();
+        //    if let Some(prev_data) = self.by_lemma.get(key_str.as_bytes()) {
+        //        let pls : Vec<WNKey> = serde_json:from_slice(prev_data.as_slice())
+        //            .expect("Database corrpution");
+        //        lemmas.extend(pls);
+        //    }
+        //    lemmas.push(key_str);
+        //    let lemmas_val = serde_json::to_string(&lemmas)
+        //        .expect("Cannot encode to database");
+
+        //    self.by_lemma.set(Vec::from(sense.lemma.as_bytes()),
+        //                    Vec::from(lemmas_val.as_bytes()));
+        //    self.by_sense_key.set(Vec::from(sense.sense_key.as_bytes()),
+        //                    Vec:;from(key_str.as_bytes()));
+        //}                        
+        // TODO : Old Keys
         Ok(())
     }
          
-    pub fn synsets(&self) -> ::std::collections::hash_map::Values<WNKey, Synset> {
-        self.synsets.values()
+    pub fn synsets<'a>(&'a self) -> Box<Iterator<Item=Synset>+'a> {
+        let iter = self.synsets.iter()
+                 .map(|k| {
+                      serde_json::from_slice(k.1.as_slice()) 
+                          .expect("Database corrpution")
+                 });
+        Box::new(iter)
     }
             
     pub fn get_synset(&self, key : &WNKey) -> Option<Synset> { 
         let key_u8 = key.to_string();
         eprintln!("Sled get synset");
-        self.synsets2.get(key_u8.as_bytes()).map(|data|
+        self.synsets.get(key_u8.as_bytes()).map(|data|
             serde_json::from_slice(data.as_slice())
                 .expect("Database corruption"))
     }
-    pub fn get_by_lemma(&self, lemma : &str) -> Vec<&Synset> { 
-        let v = Vec::new();
-        self.by_lemma.get(lemma).unwrap_or(&v)
-            .iter().flat_map(|l| self.synsets.get(l)).collect()
+    pub fn get_by_lemma(&self, lemma : &str) -> Vec<Synset> { 
+        let mut v = Vec::new();
+        if let Some(vstr) = self.by_lemma.get(lemma.as_bytes()) {
+            let values : Vec<WNKey> = serde_json::from_slice(vstr.as_slice())
+                .expect("Database corrpution");
+            for v2 in values {
+                if let Some(s) = self.get_synset(&v2) {
+                    v.push(s);
+                }
+            }
+        }
+        v
     }
-    pub fn get_id_by_ili(&self, ili : &str) -> Option<&WNKey> {
-        self.by_ili.get(ili)
+    pub fn get_id_by_ili(&self, ili : &str) -> Option<WNKey> {
+        self.by_ili.get(ili.as_bytes())
+            .map(|v| serde_json::from_slice(v.as_slice()).expect("Corrupt database"))
     }
-    pub fn get_by_ili(&self, ili : &str) -> Option<&Synset> {
-        self.by_ili.get(ili)
-            .and_then(|l| self.synsets.get(l))
+    pub fn get_by_ili(&self, ili : &str) -> Option<Synset> {
+        self.by_ili.get(ili.as_bytes())
+            .map(|v| serde_json::from_slice(v.as_slice()).expect("Corrupt database"))
+            .and_then(|l| self.get_synset(&l))
     }
-    pub fn get_id_by_sense_key(&self, sense_key : &str) -> Option<&WNKey> {
-        self.by_sense_key.get(sense_key)
+    pub fn get_id_by_sense_key(&self, sense_key : &str) -> Option<WNKey> {
+        self.by_sense_key.get(sense_key.as_bytes())
+            .map(|v| serde_json::from_slice(v.as_slice()).expect("Corrupt database"))
     }
-    pub fn get_by_sense_key(&self, sense_key : &str) -> Option<&Synset> {
-        self.by_sense_key.get(sense_key)
-            .and_then(|l| self.synsets.get(l))
+    pub fn get_by_sense_key(&self, sense_key : &str) -> Option<Synset> {
+        self.by_sense_key.get(sense_key.as_bytes())
+            .map(|v| serde_json::from_slice(v.as_slice()).expect("Corrupt database"))
+            .and_then(|l| self.get_synset(&l))
     }
-    pub fn get_id_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<&WNKey>,&'static str> {
+    pub fn get_id_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<WNKey>,&'static str> {
         let map = self.by_old_id.get(index).ok_or("No index")?;
-        Ok(map.get(id))
+        Ok(map.get(id.to_string().as_bytes())
+                   .map(|v| serde_json::from_slice(v.as_slice()).expect("Corrupt database")))
     }
-    pub fn get_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<&Synset>,&'static str> {
+    pub fn get_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<Synset>,&'static str> {
         let map = self.by_old_id.get(index).ok_or("No index")?;
-        Ok(map.get(id).and_then(|l| self.synsets.get(l)))
+        Ok(map.get(id.to_string().as_bytes())
+           .map(|v| serde_json::from_slice(v.as_slice()).expect("Corrupt database"))
+           .and_then(|l| self.get_synset(&l)))
     }
     pub fn set_old_id(&mut self, index : &str, id : &WNKey, old_id : &WNKey) -> Result<(),&'static str> {
-        self.old_skiplist.entry(index.to_owned())
-            .or_insert_with(|| OrderedSkipList::new())
-            .insert(old_id.clone());
         self.by_old_id.entry(index.to_owned())
-            .or_insert_with(|| HashMap::new())
-            .insert(old_id.clone(), id.clone());
-        self.synsets.entry(id.clone())
-            .or_insert_with(|| panic!("ILI not in WordNet??"))
-            .old_keys.entry(index.to_string())
-            .or_insert_with(|| Vec::new())
-            .push(old_id.clone());
+            .or_insert_with(|| sled::Config::default()
+                .path("sled/by_ili".to_owned()).tree())
+            .set(Vec::from(old_id.to_string().as_bytes()), 
+                 Vec::from(id.to_string().as_bytes()));
+        if let Some(mut synset) = self.get_synset(id) {
+            synset
+                .old_keys.entry(index.to_string())
+                    .or_insert_with(|| Vec::new())
+                    .push(old_id.clone());
+            self.set_synset(id.clone(), synset)
+                .map_err(|_| "Could not write synset")?;
+        }
         Ok(())
     }
     pub fn list_by_id(&self, key : &WNKey, 
                       limit : usize) -> Vec<WNKey> {
         let key_str = key.to_string();
         eprintln!("Sled list by ID");
-        self.synsets2.scan(key_str.as_bytes()).map(|i|
+        self.synsets.scan(key_str.as_bytes()).map(|i|
             WNKey::from_str(&String::from_utf8(i.0).expect("Database corrupt"))
                 .expect("Database corrupt"))
             .take(limit)
             .collect()
-        
-//        self.id_skiplist.range(Included(key), Unbounded).take(limit)
     }
     pub fn list_by_lemma(&self, lemma : &String,
-                          limit : usize) -> Take<Iter<String>> {
-        self.lemma_skiplist.range(Included(lemma), Unbounded).take(limit)
-    }
-    pub fn list_by_ili(&self, ili : &String,
-                        limit : usize) -> Take<Iter<String>> {
-        self.ili_skiplist.range(Included(ili), Unbounded).take(limit)
-    }
-    pub fn list_by_sense_key(&self, sense_key : &String,
-                              limit : usize) -> Take<Iter<String>> {
-        self.sense_key_skiplist.range(Included(sense_key), Unbounded)
+                          limit : usize) -> Vec<String> {
+        self.by_lemma.scan(lemma.as_bytes()).map(|i| 
+            serde_json::from_slice(i.1.as_slice()).expect("Database corrupt"))
             .take(limit)
+            .collect()
+     }
+    pub fn list_by_ili(&self, ili : &String,
+                        limit : usize) -> Vec<String> {
+        self.by_ili.scan(ili.as_bytes()).map(|i| 
+            serde_json::from_slice(i.1.as_slice()).expect("Database corrupt"))
+            .take(limit)
+            .collect()
+     }
+    pub fn list_by_sense_key(&self, sense_key : &String,
+                              limit : usize) -> Vec<String> {
+        self.by_sense_key.scan(sense_key.as_bytes()).map(|i| 
+            serde_json::from_slice(i.1.as_slice()).expect("Database corrupt"))
+            .take(limit)
+            .collect()
     }
     pub fn list_by_old_id(&self, index : &str, key : &WNKey,
-                      limit : usize) -> Result<Take<Iter<WNKey>>,&'static str> {
-        let list = self.old_skiplist.get(index).ok_or("Index not found")?;
-        Ok(list.range(Included(key), Unbounded).take(limit))
+                      limit : usize) -> Result<Vec<WNKey>,&'static str> {
+        let list = self.by_old_id.get(index).ok_or("Index not found")?;
+        Ok(list.scan(key.to_string().as_bytes()).map(|i| {
+            let z = i.1;
+            serde_json::from_slice(z.as_slice()).expect("Database corrupt")
+        }).take(limit).collect())
     }
 }
 
@@ -587,21 +645,7 @@ impl WordNet {
                 Err(e) => { return Err(WordNetLoadError::Xml(e)); }
             }
         }
-        let mut wordnet = WordNet {
-            synsets2: sled::Config::default()
-                .path("sled/synsets".to_owned())
-                .tree(),                
-            synsets: synsets.clone(),
-            by_lemma: HashMap::new(),
-            by_ili: HashMap::new(),
-            by_sense_key: HashMap::new(),
-            by_old_id: HashMap::new(),
-            lemma_skiplist: lemma_skiplist,
-            ili_skiplist: OrderedSkipList::new(),
-            id_skiplist: OrderedSkipList::new(),
-            sense_key_skiplist: OrderedSkipList::new(),
-            old_skiplist: HashMap::new()
-        };
+        let mut wordnet = WordNet::new();
         wordnet.set_synsets(synsets)?;
         build_indexes(&mut wordnet);
         build_tabs(&mut wordnet)?;
@@ -634,10 +678,10 @@ fn build_glosstags(wordnet : &mut WordNet)
     eprintln!("Loading gloss tags (verb)");
     result.extend(read_glosstag_corpus("data/merged/verb.xml", &wordnet)?);
     for (k,v) in result.iter() {
-        wordnet.synsets.get_mut(k)
-            .map(|x| {
-                x.gloss = Some(v.clone())
-            });
+        if let Some(mut s) = wordnet.get_synset(k) {
+            s.gloss = Some(v.clone());
+            wordnet.set_synset(k.clone(), s)?;
+        }
     }
     Ok(())
 }
@@ -675,19 +719,19 @@ fn build_tab<P : AsRef<Path>>(file : P,
     
 
 fn build_indexes(wordnet : &mut WordNet) {
-    eprintln!("Building indexes");
-    for (id, synset) in wordnet.synsets.iter() {
-        wordnet.ili_skiplist.insert(synset.ili.clone());
-        wordnet.id_skiplist.insert(id.clone());
-        wordnet.by_ili.insert(synset.ili.clone(), id.clone());
-        for sense in synset.lemmas.iter() {
-            wordnet.by_sense_key.insert(sense.sense_key.clone(), id.clone());
-            wordnet.sense_key_skiplist.insert(sense.sense_key.clone());
-            wordnet.by_lemma.entry(sense.lemma.clone())
-                .or_insert_with(|| Vec::new())
-                .push(id.clone());
-        }
-    }
+//    eprintln!("Building indexes");
+//    for (id, synset) in wordnet.synsets.iter() {
+//        wordnet.ili_skiplist.insert(synset.ili.clone());
+//        wordnet.id_skiplist.insert(id.clone());
+//        wordnet.by_ili.insert(synset.ili.clone(), id.clone());
+//        for sense in synset.lemmas.iter() {
+//            wordnet.by_sense_key.insert(sense.sense_key.clone(), id.clone());
+//            wordnet.sense_key_skiplist.insert(sense.sense_key.clone());
+//            wordnet.by_lemma.entry(sense.lemma.clone())
+//                .or_insert_with(|| Vec::new())
+//                .push(id.clone());
+//        }
+//    }
 }
 
 fn build_tabs(wordnet : &mut WordNet) -> Result<(),WordNetLoadError> {
@@ -723,13 +767,11 @@ fn build_omwn(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
        let omwn = load_omwn(format!("data/wns/{}/wn-data-{}.tab", project, lang),
             &wordnet)?;
        for (key, values) in omwn.iter() {
-           match wordnet.synsets.get_mut(&key) {
-               Some(s) => {
-                   let mut vs = values.clone();
-                   vs.dedup();
-                   s.foreign.insert(lang.to_string(), vs);
-               },
-               None => {}
+           if let Some(mut s2) = wordnet.get_synset(&key) {
+               let mut vs = values.clone();
+               vs.dedup();
+               s2.foreign.insert(lang.to_string(), vs);
+               wordnet.set_synset(key.clone(), s2)?;
            }
        }
     }
