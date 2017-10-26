@@ -131,7 +131,7 @@ fn load_w3c(wordnet : &WordNet) -> Result<HashMap<WNKey, String>,WordNetLoadErro
         if let Some(url) = elems.next() {
             if let Some(wn20) = elems.next() {
                 let wn20key = WNKey::from_str(wn20)?;
-                if let Some(wn30) = wordnet.get_id_by_old_id("wn20", &wn20key)
+                if let Some(wn30) = wordnet.get_id_by_old_id("pwn20", &wn20key)
                         .expect("WordNet 2.0 Index not loaded but loading W3C") {
                     map.insert(wn30.clone(), url[1..(url.len()-1)].to_string());
                 }

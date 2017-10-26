@@ -63,7 +63,7 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                             "bad wn30 id"))?;
                     let num : String = wn30id.chars().skip(1).collect();
                     let id = WNKey::from_str(&format!("{}-{}", num ,pos))?;
-                    current_id = wordnet.get_id_by_old_id("wn30", &id)
+                    current_id = wordnet.get_id_by_old_id("pwn30", &id)
                         .expect("Loading gloss tags without WN 3.0 index")
                         .map(|x| x.clone());
                 } else if name.local_name == "gloss" {

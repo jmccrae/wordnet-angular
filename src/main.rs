@@ -27,7 +27,7 @@ use rocket::State;
 use rocket::Response;
 use rocket::Request;
 use rocket::request::{FromRequest,Outcome};
-use rocket::http::hyper::header::Location;
+use rocket::http::hyper::header::{Location,CacheDirective,CacheControl};
 use rocket::Outcome::Success;
 use rocket::http::{ContentType, Status};
 use std::io::Cursor;
@@ -116,6 +116,7 @@ fn get_xml<'r>(state : State<WordNetState>, index : String, name : String)
 fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
     Ok(Response::build()
         .header(ContentType::GIF)
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
         .sized_body(File::open(&format!("flags/{}.gif", code))?)
         .finalize())
 }
@@ -125,44 +126,58 @@ fn get_static<'r>(name : String) -> Response<'r> {
     if name == "app.js" {
         Response::build()
             .header(ContentType::JavaScript)
-            .sized_body(File::open("src/app.js").unwrap())
-//            .sized_body(Cursor::new(include_str!("app.js")))
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("app.js")))
+            //.sized_body(File::open("src/app.js").unwrap())
             .finalize()
     } else if name == "favicon.ico" {
         Response::build()
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            //.sized_body(Cursor::new(include_str!("favicon.ico")))
             .sized_body(File::open("src/favicon.ico").unwrap())
             .finalize()
     } else if name == "synset.html" {
         Response::build()
-            .sized_body(File::open("src/synset.html").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("synset.html")))
+            //.sized_body(File::open("src/synset.html").unwrap())
             .finalize()
     } else if name == "wordnet.html" {
         Response::build()
-            .sized_body(File::open("src/wordnet.html").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("wordnet.html")))
+            //.sized_body(File::open("src/wordnet.html").unwrap())
             .finalize()
     } else if name == "relation.html" {
         Response::build()
-            .sized_body(File::open("src/relation.html").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("relation.html")))
+            //.sized_body(File::open("src/relation.html").unwrap())
             .finalize()
     } else if name == "princeton.png" {
         Response::build()
             .header(ContentType::PNG)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/princeton.png").unwrap())
             .finalize()
     } else if name == "verbnet.gif" {
         Response::build()
             .header(ContentType::GIF)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/verbnet.gif").unwrap())
             .finalize()
     } else if name == "wikipedia.png" {
         Response::build()
             .header(ContentType::PNG)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/wikipedia.png").unwrap())
             .finalize()
     } else if name == "wn.css" {
         Response::build()
             .header(ContentType::CSS)
-            .sized_body(File::open("src/wn.css").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("wn.css")))
+            //.sized_body(File::open("src/wn.css").unwrap())
             .finalize()
     } else {
         Response::build()
@@ -415,22 +430,27 @@ fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiat
 #[get("/")]
 fn index<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/index.html").unwrap())
-        //.sized_body(Cursor::new(include_str!("index.html")))
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/index.html").unwrap())
+        .sized_body(Cursor::new(include_str!("index.html")))
         .finalize()
 }
 
 #[get("/about")]
 fn about<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/about.html").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/about.html").unwrap())
+        .sized_body(Cursor::new(include_str!("about.html")))
         .finalize()
 }
 
 #[get("/license")]
 fn license<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/license.html").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/license.html").unwrap())
+        .sized_body(Cursor::new(include_str!("license.html")))
         .finalize()
 }
 
@@ -439,28 +459,34 @@ fn license<'r>() -> Response<'r> {
 fn ontology<'r>() -> Response<'r> {
     Response::build()
         .header(ContentType::new("application","rdf+xml"))
-        .sized_body(File::open("src/ontology.rdf").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/ontology.rdf").unwrap())
+        .sized_body(Cursor::new(include_str!("ontology.rdf")))
         .finalize()
 }
 
 #[get("/ontology.html")]
 fn ontology_html<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/ontology.html").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/ontology.html").unwrap())
+        .sized_body(Cursor::new(include_str!("ontology.html")))
         .finalize()
 }
 
         
 
 struct Config {
-    wn_file : String
+    wn_file : String,
+    reload : bool
 }
 
 impl Config {
     fn new(matches : &ArgMatches) -> Result<Config, &'static str> {
         let wn_file = matches.value_of("wn").unwrap_or("data/wn31.xml");
         Ok(Config {
-            wn_file: wn_file.to_string()
+            wn_file: wn_file.to_string(),
+            reload: matches.is_present("reload")
         })
     }
 }
@@ -505,8 +531,12 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
     handlebars.register_helper("long_pos", Box::new(long_pos));
     eprintln!("Loading WordNet data");
-    let wordnet = WordNet::load(config.wn_file)
-      .map_err(|e| format!("Failed to load WordNet: {}", e))?;
+    let wordnet = if config.reload  {
+        WordNet::load(config.wn_file)
+      .map_err(|e| format!("Failed to load WordNet: {}", e))?
+    } else {
+        WordNet::new_using_indexes()
+    };
     // Quick loading code for testing
     //let mut wordnet = WordNet {
     //    synsets : HashMap::new(),
@@ -567,6 +597,10 @@ fn main() {
         .version("1.0")
         .author("John P. McCrae <john@mccr.ae>")
         .about("WordNet Angular Interface")
+        .arg(Arg::with_name("reload")
+             .long("reload")
+             .help("Reload the indexes from the sources")
+             .takes_value(false))
         .arg(Arg::with_name("wn")
             .long("wn")
             .value_name("wn31.xml")

@@ -19,7 +19,7 @@ pub fn load_omwn<P: AsRef<Path>>(p : P, wordnet : &WordNet)
                    elems.next().map(|t| {
                         elems.next().map(|v| {
                             if t.ends_with("lemma") {
-                                wordnet.get_id_by_old_id("wn30", &wn30key)
+                                wordnet.get_id_by_old_id("pwn30", &wn30key)
                                   .expect("Need WordNet 3.0 mapping to load OMWN")
                                   .map(|id| {
                                     result.entry(id.clone())
