@@ -18,49 +18,41 @@ pub struct Link {
 
 /// Load all links to VerbNet, W3C and Wikipedia
 pub fn load_links(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
-    eprintln!("Loading VerbNet");
-    let verbs = load_all_verbs().unwrap_or_else(|e| {
-        eprintln!("Failed to load VerbNet: {}", e);
-        HashMap::new()
-    });
-    eprintln!("Loading W3C Links");
-    let w3c = load_w3c(&wordnet).unwrap_or_else(|e| {
-        eprintln!("Failed to load W3C: {}", e);
-        HashMap::new()
-    });
-    eprintln!("Loading Wikipedia Links");
-    let wwim = load_wwim(&wordnet).unwrap_or_else(|e| {
-        eprintln!("Failed to load Wikipedia Links: {}", e);
-        HashMap::new()
-    });
-
-    let mut synsets_to_update = Vec::new();
-    for _synset in wordnet.synsets() {
-       let mut synset = _synset.clone();
-       if let Some(w) = w3c.get(&synset.id) {
-           synset.links.push(Link { link_type: LinkType::W3C, target: w.to_string() });
-       }
-       if let Some(vs) = wwim.get(&synset.id) {
-           for v in vs {
-               synset.links.push(Link { link_type: LinkType::Wikipedia, target: v.to_string() });
-           }
-       }
-       for s in synset.lemmas.iter() {
-           if let Some(vs) = verbs.get(&s.sense_key) {
-               for v in vs {
-                   if !synset.links.iter().any(|l| l.target == *v) {
-                       synset.links.push(Link {
-                           link_type: LinkType::VerbNet,
-                           target: v.to_string()
-                       });
-                   }
-               }
-           }
-       }
-       synsets_to_update.push(synset);
+    {
+        eprintln!("Loading VerbNet");
+        let verbs = load_all_verbs().unwrap_or_else(|e| {
+            eprintln!("Failed to load VerbNet: {}", e);
+            HashMap::new()
+        });
+        for (sense_key, vs) in verbs {
+            if let Some(key) = wordnet.get_id_by_sense_key(&sense_key)? {
+                for v in vs {
+                    wordnet.insert_link(&key, LinkType::VerbNet, v)?;
+                }
+            }
+        }
     }
-    for synset in synsets_to_update {
-       wordnet.set_synset(synset.id.clone(), synset)?;
+    {
+        eprintln!("Loading W3C Links");
+        let w3c = load_w3c(&wordnet).unwrap_or_else(|e| {
+            eprintln!("Failed to load W3C: {}", e);
+            HashMap::new()
+        });
+        for (key, target) in w3c {
+            wordnet.insert_link(&key, LinkType::W3C, target)?;
+        }
+    }
+    {
+        eprintln!("Loading Wikipedia Links");
+        let wwim = load_wwim(&wordnet).unwrap_or_else(|e| {
+            eprintln!("Failed to load Wikipedia Links: {}", e);
+            HashMap::new()
+        });
+        for (key, targets) in wwim {
+            for target in targets {
+                wordnet.insert_link(&key, LinkType::Wikipedia, target)?;
+            }
+        }
     }
     Ok(())
 }
@@ -156,7 +148,7 @@ fn load_wwim(wordnet : &WordNet) -> Result<HashMap<WNKey, Vec<String>>, WordNetL
                 if let Some(dbpedia_url) = elems.next() {
                     let ili = ili_url[30..(ili_url.len()-1)].to_string();
                     let wiki_id = dbpedia_url[29..(dbpedia_url.len()-1)].to_string();
-                    if let Some(id) = wordnet.get_id_by_ili(&ili) {
+                    if let Some(id) = wordnet.get_id_by_ili(&ili)? {
                         map.entry(id.clone())
                             .or_insert_with(|| Vec::new())
                             .push(wiki_id);

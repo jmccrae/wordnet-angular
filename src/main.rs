@@ -12,7 +12,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate handlebars;
-extern crate sled;
+extern crate rusqlite;
 
 mod wordnet;
 mod glosstag;
@@ -74,7 +74,7 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
 
 #[get("/ttl/<index>/<name>")]
 fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, &'static str> {
+        -> Result<Response<'r>, String> {
     Ok(Response::build()
        .header(ContentType::new("text","turtle"))
        .sized_body(Cursor::new(
@@ -87,7 +87,7 @@ fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String)
 
 #[get("/rdf/<index>/<name>")]
 fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, &'static str> {
+        -> Result<Response<'r>, String> {
     Ok(Response::build()
        .header(ContentType::new("application","rdf+xml"))
        .sized_body(Cursor::new(
@@ -102,7 +102,7 @@ fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String)
 
 #[get("/xml/<index>/<name>")]
 fn get_xml<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, &'static str> {
+        -> Result<Response<'r>, String> {
     Ok(Response::build()
        .header(ContentType::XML)
        .sized_body(Cursor::new(
@@ -188,23 +188,29 @@ fn get_static<'r>(name : String) -> Response<'r> {
 }
 
 fn get_synsets(wordnet : &WordNet, index : &str, id : &str) 
-        -> Result<Vec<Synset>, &'static str> {
+        -> Result<Vec<Synset>, String> {
     let wn = if index == "id" {
         vec![wordnet.get_synset(&WNKey::from_str(id)
-                .map_err(|_| "Not a WordNet ID")?)
-            .ok_or("Synset Not Found")?.clone()]
+                .map_err(|_| format!("Not a WordNet ID"))?)
+            .map_err(|e| format!("Database error: {}", e))?
+            .ok_or(format!("Synset Not Found"))?.clone()]
     } else if index == "lemma" {
-        wordnet.get_by_lemma(id).iter().map(|x| (*x).clone()).collect()
+        wordnet.get_by_lemma(id)
+            .map_err(|e| format!("Database error: {}", e))?
+            .iter().map(|x| (*x).clone()).collect()
     } else if index == "ili" {
         vec![wordnet.get_by_ili(id)
-                .ok_or("Synset Not Found")?.clone()]
+                .map_err(|e| format!("Database Error: {}", e))?
+                .ok_or(format!("Synset Not Found"))?.clone()]
     } else if index == "sense_key" {
         vec![wordnet.get_by_sense_key(id)
-                .ok_or("Synset Not Found")?.clone()]
+                .map_err(|e| format!("Database Error: {}", e))?
+                .ok_or(format!("Synset Not Found"))?.clone()]
      } else {
         vec![wordnet.get_by_old_id(index, &WNKey::from_str(id)
-                .map_err(|_| "Not a WordNet Key")?)?
-                .ok_or("Synset Not Found")?.clone()]
+                .map_err(|_| format!("Not a WordNet Key"))?)
+                .map_err(|e| format!("Database Error: {}", e))?
+                .ok_or(format!("Synset Not Found"))?.clone()]
     };
     Ok(wn)
 }
@@ -212,10 +218,10 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
 #[get("/json/<index>/<id>")]
 fn synset<'r>(index : String, id : String, 
               status : State<WordNetState>) 
-        -> Result<Response<'r>,&'static str> {
+        -> Result<Response<'r>,String> {
     let synsets = get_synsets(&status.wordnet, &index, &id)?;
     let json = serde_json::to_string(&synsets)
-        .map_err(|_| "Failed to serialize synset")?;
+        .map_err(|e| format!("Failed to serialize synset: {}", e))?;
     Ok(Response::build()
         .sized_body(Cursor::new(json))
         .finalize())
@@ -243,7 +249,7 @@ fn autocomplete_lemma(index : String, key : String,
         state : State<WordNetState>) -> Result<String, &'static str> {
     let mut results = Vec::new();
     if index == "lemma" {
-        for s in state.wordnet.list_by_lemma(&key, 10) {
+        for s in state.wordnet.list_by_lemma(&key, 10).map_err(|_| "Database error")? {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -253,7 +259,7 @@ fn autocomplete_lemma(index : String, key : String,
         }   
     } else if index == "id" {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.list_by_id(&key2, 10) {
+        for s in state.wordnet.list_by_id(&key2, 10).map_err(|_| "Database error")? {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -262,7 +268,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
     } else if index == "ili" {
-        for s in state.wordnet.list_by_ili(&key, 10) {
+        for s in state.wordnet.list_by_ili(&key, 10).map_err(|_| "Database error")? {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -271,7 +277,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
      } else if index == "sense_key" {
-        for s in state.wordnet.list_by_sense_key(&key, 10) {
+        for s in state.wordnet.list_by_sense_key(&key, 10).map_err(|_| "Database error")? {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -281,7 +287,7 @@ fn autocomplete_lemma(index : String, key : String,
         }   
      } else {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.list_by_old_id(&index, &key2, 10)? {
+        for s in state.wordnet.list_by_old_id(&index, &key2, 10).map_err(|_| "Database error")? {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),

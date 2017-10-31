@@ -95,7 +95,7 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                     let sk = attr_value(&attributes, "sk") 
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "id does not have sk"))?;
-                    wordnet.get_id_by_sense_key(&sk)
+                    wordnet.get_id_by_sense_key(&sk)?
                         .map(|ss| {
                             if in_glob {
                                 current_word.glob = Some(ss.to_string())
