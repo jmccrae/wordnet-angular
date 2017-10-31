@@ -26,6 +26,7 @@ use std::process::exit;
 use rocket::State;
 use rocket::Response;
 use rocket::Request;
+use rocket::config::{Environment, Config as RocketConfig};
 use rocket::request::{FromRequest,Outcome};
 use rocket::http::hyper::header::{Location,CacheDirective,CacheControl};
 use rocket::Outcome::Success;
@@ -475,18 +476,22 @@ fn ontology_html<'r>() -> Response<'r> {
 }
 
         
-
+#[derive(Clone)]
 struct Config {
     wn_file : String,
-    reload : bool
+    reload : bool,
+    port : u16
 }
 
 impl Config {
     fn new(matches : &ArgMatches) -> Result<Config, &'static str> {
         let wn_file = matches.value_of("wn").unwrap_or("data/wn31.xml");
+        let port = str::parse::<u16>(matches.value_of("port").unwrap_or("8000"))
+            .map_err(|_| "Port must be an integer")?;
         Ok(Config {
             wn_file: wn_file.to_string(),
-            reload: matches.is_present("reload")
+            reload: matches.is_present("reload"),
+            port: port
         })
     }
 }
@@ -530,11 +535,12 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
         .expect("Could not load rdfxml.hbs");
     handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
     handlebars.register_helper("long_pos", Box::new(long_pos));
-    eprintln!("Loading WordNet data");
     let wordnet = if config.reload  {
+        eprintln!("Loading WordNet data");
         WordNet::load(config.wn_file)
       .map_err(|e| format!("Failed to load WordNet: {}", e))?
     } else {
+        eprintln!("Opening WordNet data");
         WordNet::new_using_indexes()
     };
     // Quick loading code for testing
@@ -601,6 +607,11 @@ fn main() {
              .long("reload")
              .help("Reload the indexes from the sources")
              .takes_value(false))
+        .arg(Arg::with_name("port")
+             .short("p")
+             .value_name("port")
+             .help("The port to start the server on")
+             .takes_value(true))
         .arg(Arg::with_name("wn")
             .long("wn")
             .value_name("wn31.xml")
@@ -609,9 +620,13 @@ fn main() {
     let matches = app.clone().get_matches();
     match Config::new(&matches) {
         Ok(config) => 
-            match prepare_server(config) {
+            match prepare_server(config.clone()) {
                 Ok(state) => {
-                    rocket::ignite()
+                    rocket::custom(
+                        RocketConfig::build(Environment::Staging)
+                                .port(config.port)
+                                .finalize()
+                                .expect("Could not configure Rocket"), false)
                         .manage(state)
                         .mount("/", routes![
                                 about, ontology, ontology_html, license,
