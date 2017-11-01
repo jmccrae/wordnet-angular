@@ -227,6 +227,27 @@ fn synset<'r>(index : String, id : String,
         .finalize())
 }
 
+#[get("/json_rel/<id>")]
+fn rel_targets<'r>(id : String, status : State<WordNetState>) -> Result<Response<'r>,String> {
+    let synset = status.wordnet.get_synset(&WNKey::from_str(&id)
+                .map_err(|_| format!("Not a WordNet ID"))?)
+            .map_err(|e| format!("Database error: {}", e))?
+            .ok_or(format!("Synset Not Found"))?;
+    let mut targets = Vec::new();
+    for rel in synset.relations {
+        if let Some(ss) = status.wordnet.get_synset(&WNKey::from_str(&rel.target)
+            .map_err(|_| format!("WordNet ID link not valid!"))?)
+            .map_err(|_| format!("Could not read WordNet"))? {
+            targets.push(ss);
+        }
+    }
+    let json = serde_json::to_string(&targets)
+        .map_err(|e| format!("Failed to serialize synset: {}", e))?;
+    Ok(Response::build()
+        .sized_body(Cursor::new(json))
+        .finalize())
+}
+
 #[derive(Clone,Debug,Serialize,Deserialize)]
 struct AutocompleteResult {
     display: String,
@@ -246,20 +267,20 @@ fn autocomplete_wn_key(k : &str) -> Result<WNKey, &'static str> {
 
 #[get("/autocomplete/<index>/<key>")]
 fn autocomplete_lemma(index : String, key : String, 
-        state : State<WordNetState>) -> Result<String, &'static str> {
+        state : State<WordNetState>) -> Result<String, String> {
     let mut results = Vec::new();
     if index == "lemma" {
-        for s in state.wordnet.list_by_lemma(&key, 10).map_err(|_| "Database error")? {
-            if s.starts_with(&key) {
+        for s in state.wordnet.list_by_lemma(&key, 10).map_err(|e| format!("Database error: {}", e))? {
+//            if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
                     item: s.to_string()
                 })
-            }
+//            }
         }   
     } else if index == "id" {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.list_by_id(&key2, 10).map_err(|_| "Database error")? {
+        for s in state.wordnet.list_by_id(&key2, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -268,7 +289,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
     } else if index == "ili" {
-        for s in state.wordnet.list_by_ili(&key, 10).map_err(|_| "Database error")? {
+        for s in state.wordnet.list_by_ili(&key, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -277,7 +298,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
      } else if index == "sense_key" {
-        for s in state.wordnet.list_by_sense_key(&key, 10).map_err(|_| "Database error")? {
+        for s in state.wordnet.list_by_sense_key(&key, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -287,7 +308,7 @@ fn autocomplete_lemma(index : String, key : String,
         }   
      } else {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.list_by_old_id(&index, &key2, 10).map_err(|_| "Database error")? {
+        for s in state.wordnet.list_by_old_id(&index, &key2, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -296,7 +317,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
 }
-    serde_json::to_string(&results).map_err(|_| "Could not translate to JSON")
+    serde_json::to_string(&results).map_err(|e| format!("Json error: {}", e))
 }
 
 enum ContentNegotiation { Html, RdfXml, Turtle, Json }
@@ -547,7 +568,7 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
       .map_err(|e| format!("Failed to load WordNet: {}", e))?
     } else {
         eprintln!("Opening WordNet data");
-        WordNet::new_using_indexes()
+        WordNet::new()
     };
     // Quick loading code for testing
     //let mut wordnet = WordNet {
@@ -598,6 +619,7 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     //    links: vec![links::Link { link_type: links::LinkType::Wikipedia, target: "Cat".to_string()}]
     //});
     //wordnet.by_lemma.insert("cat".to_string(), vec![WNKey::from_str("00001740-n").unwrap()]);
+    eprintln!("WordNet loaded");
     Ok(WordNetState {
         wordnet: wordnet,
         handlebars: handlebars
@@ -636,7 +658,7 @@ fn main() {
                         .manage(state)
                         .mount("/", routes![
                                 about, ontology, ontology_html, license,
-                                get_xml, get_ttl, get_rdf,
+                                get_xml, get_ttl, get_rdf, rel_targets,
                                 index, synset, get_flag,
                                 autocomplete_lemma, get_static,
                                 lemma, id, ili, sense_key, 

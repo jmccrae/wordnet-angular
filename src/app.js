@@ -67,8 +67,14 @@ angular.module('app').component('synset', {
             display: '<',
             focus: '='
         },
-        controller: function() {
+        controller: function($http) {
             var ctrl = this;
+            ctrl.targetsynsets = [];
+            $http.get("/json_rel/" + this.synset.id).then(
+                    function(response) {
+                        ctrl.targetsynsets = response.data;
+                    }, function(response) { alert(response); }
+            );
             ctrl.hasSubcats = function() {
                 for(i = 0; i < this.synset.lemmas.length; i++) {
                     if(this.synset.lemmas[i].subcats.length > 0) {
@@ -86,21 +92,49 @@ angular.module('app').component('synset', {
 angular.module('app').component('synset2', {
     templateUrl: '/static/synset.html',
     bindings: {
-        target: '<',
+        synset: '<',
         display: '<',
         focus: '='
     },
     controller: function($http) {
         var ctrl = this;
-        ctrl.synset = {};
-        $http.get("/json/id/" + ctrl.target).then(
-            function(response) {
-                ctrl.synset = response.data[0];
-            },
-            function(response) {
-                console.log(response.data);
-            });
+        ctrl.targetsynsets = [];
+        $http.get("/json_rel/" + this.synset.id).then(
+                function(response) {
+                    ctrl.targetsynsets = response.data;
+                }, function(response) { alert(response); }
+        );
+        ctrl.hasSubcats = function() {
+            for(i = 0; i < this.synset.lemmas.length; i++) {
+                if(this.synset.lemmas[i].subcats.length > 0) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        ctrl.underlineSubcat = function(subcat, lemma) {
+            return subcat.replace('%s', '<span class="underline">' + lemma + '</span>');
+        };
     }
+    //,
+//    controller: function($http) {
+//        var ctrl = this;
+//        ctrl.synset = null;
+//        for(i = 0; i < target_synsets.length; i++) {
+//            if(ctrl.target === target_synsets[j].id) {
+//                ctrl.synset = target_synsets[j];
+//            }
+//        }
+//        if(ctrl.synset == null) {
+//            $http.get("/json/id/" + ctrl.target).then(
+//                function(response) {
+//                    ctrl.synset = response.data[0];
+//                },
+//                function(response) {
+//                    console.log(response.data);
+//                });
+//        }
+//    }
 });
 
 angular.module('app').component('relation', {
@@ -109,9 +143,11 @@ angular.module('app').component('relation', {
             fullname: '@',
             relation: '@',
             relations: '=',
-            display: '<'
+            display: '<',
+            targetsynsets: '<'
         },
-        controller: function() {
+        controller: function($http) {
+            var ctrl = this;
             this.show = false;
         }
 //        controller: function($scope,$http) {

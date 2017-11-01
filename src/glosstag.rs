@@ -4,7 +4,7 @@ use std::io::{BufReader};
 use xml::reader::{EventReader, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
-use wordnet::{WNKey, WordNetLoadError, WordNet};
+use wordnet::{WNKey, WordNetLoadError, WordNetBuilder};
 use std::str::FromStr;
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -37,7 +37,7 @@ fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String
 
 
 pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
-        wordnet : &WordNet) -> Result<GlossTagCorpus, WordNetLoadError> {
+        wordnet : &WordNetBuilder) -> Result<GlossTagCorpus, WordNetLoadError> {
     let file = BufReader::new(File::open(path)?);
 
     let parse = EventReader::new(file);
@@ -63,7 +63,7 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                             "bad wn30 id"))?;
                     let num : String = wn30id.chars().skip(1).collect();
                     let id = WNKey::from_str(&format!("{}-{}", num ,pos))?;
-                    current_id = wordnet.get_id_by_old_id("pwn30", &id)
+                    current_id = wordnet.get_id_by_pwn30(&id)
                         .expect("Loading gloss tags without WN 3.0 index")
                         .map(|x| x.clone());
                 } else if name.local_name == "gloss" {

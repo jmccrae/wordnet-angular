@@ -1,5 +1,5 @@
 use std::path::Path;
-use wordnet::{WNKey,WordNetLoadError,WordNet};
+use wordnet::{WNKey,WordNetLoadError,WordNetBuilder};
 use std::collections::HashMap;
 use std::io::{BufRead,BufReader};
 use std::fs::{read_dir,File};
@@ -17,20 +17,23 @@ pub struct Link {
 }
 
 /// Load all links to VerbNet, W3C and Wikipedia
-pub fn load_links(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
+pub fn load_links(wordnet : &mut WordNetBuilder) -> Result<(), WordNetLoadError> {
     {
         eprintln!("Loading VerbNet");
         let verbs = load_all_verbs().unwrap_or_else(|e| {
             eprintln!("Failed to load VerbNet: {}", e);
             HashMap::new()
         });
+        let mut links = Vec::new();
         for (sense_key, vs) in verbs {
             if let Some(key) = wordnet.get_id_by_sense_key(&sense_key)? {
                 for v in vs {
-                    wordnet.insert_link(&key, LinkType::VerbNet, v)?;
+                    links.push((key.clone(), v));
+                    //wordnet.insert_link(&key, LinkType::VerbNet, v)?;
                 }
             }
         }
+        wordnet.insert_links(LinkType::VerbNet, links)?;
     }
     {
         eprintln!("Loading W3C Links");
@@ -38,9 +41,12 @@ pub fn load_links(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
             eprintln!("Failed to load W3C: {}", e);
             HashMap::new()
         });
+        let mut links = Vec::new();
         for (key, target) in w3c {
-            wordnet.insert_link(&key, LinkType::W3C, target)?;
+            links.push((key, target));
+            //wordnet.insert_link(&key, LinkType::W3C, target)?;
         }
+        wordnet.insert_links(LinkType::W3C, links)?;
     }
     {
         eprintln!("Loading Wikipedia Links");
@@ -48,11 +54,14 @@ pub fn load_links(wordnet : &mut WordNet) -> Result<(), WordNetLoadError> {
             eprintln!("Failed to load Wikipedia Links: {}", e);
             HashMap::new()
         });
+        let mut links = Vec::new();
         for (key, targets) in wwim {
             for target in targets {
-                wordnet.insert_link(&key, LinkType::Wikipedia, target)?;
+                links.push((key.clone(), target));
+                //wordnet.insert_link(&key, LinkType::Wikipedia, target)?;
             }
         }
+        wordnet.insert_links(LinkType::Wikipedia, links)?;
     }
     Ok(())
 }
@@ -112,7 +121,7 @@ fn load_all_verbs() -> Result<HashMap<String, Vec<String>>, WordNetLoadError> {
 }
 
 
-fn load_w3c(wordnet : &WordNet) -> Result<HashMap<WNKey, String>,WordNetLoadError> {
+fn load_w3c(wordnet : &WordNetBuilder) -> Result<HashMap<WNKey, String>,WordNetLoadError> {
     let file = BufReader::new(File::open("data/w3c-wn20.csv")?);
 
     let mut map = HashMap::new();
@@ -123,7 +132,7 @@ fn load_w3c(wordnet : &WordNet) -> Result<HashMap<WNKey, String>,WordNetLoadErro
         if let Some(url) = elems.next() {
             if let Some(wn20) = elems.next() {
                 let wn20key = WNKey::from_str(wn20)?;
-                if let Some(wn30) = wordnet.get_id_by_old_id("pwn20", &wn20key)
+                if let Some(wn30) = wordnet.get_id_by_pwn20(&wn20key)
                         .expect("WordNet 2.0 Index not loaded but loading W3C") {
                     map.insert(wn30.clone(), url[1..(url.len()-1)].to_string());
                 }
@@ -134,7 +143,7 @@ fn load_w3c(wordnet : &WordNet) -> Result<HashMap<WNKey, String>,WordNetLoadErro
     Ok(map)
 }
 
-fn load_wwim(wordnet : &WordNet) -> Result<HashMap<WNKey, Vec<String>>, WordNetLoadError> {
+fn load_wwim(wordnet : &WordNetBuilder) -> Result<HashMap<WNKey, Vec<String>>, WordNetLoadError> {
     let file = BufReader::new(File::open("data/ili-map-dbpedia.ttl")?);
 
     let mut map = HashMap::new();
