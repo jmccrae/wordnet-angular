@@ -147,3 +147,24 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
     }
     Ok(all_sents)
 }
+
+fn build_glosstags(wordnet : &mut WordNetBuilder)
+         -> Result<(), WordNetLoadError> {
+    eprintln!("Loading gloss tags (adj)");
+    let mut result = read_glosstag_corpus("data/merged/adj.xml", &wordnet)?;
+    eprintln!("Loading gloss tags (adv)");
+    result.extend(read_glosstag_corpus("data/merged/adv.xml", &wordnet)?);
+    eprintln!("Loading gloss tags (noun)");
+    result.extend(read_glosstag_corpus("data/merged/noun.xml", &wordnet)?);
+    eprintln!("Loading gloss tags (verb)");
+    result.extend(read_glosstag_corpus("data/merged/verb.xml", &wordnet)?);
+    for (k,v) in result.iter() {
+        if let Some(mut s) = wordnet.get_synset(k)? {
+            s.gloss = Some(v.clone());
+            wordnet.update_synset(k.clone(), s)?;
+        }
+    }
+    Ok(())
+}
+
+

@@ -15,7 +15,7 @@ extern crate handlebars;
 extern crate rusqlite;
 
 mod wordnet;
-mod glosstag;
+//mod glosstag;
 mod omwn;
 mod links;
 

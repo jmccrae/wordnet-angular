@@ -1,6 +1,6 @@
 //! Functions for handling the in-memory model of WordNet and loading it form
 //! disk
-use glosstag::{Gloss,read_glosstag_corpus};
+//use glosstag::{Gloss,build_glosstags};
 use omwn::load_omwn;
 use serde::de::{Visitor, Deserializer, Error as DeError};
 use serde::{Serialize, Serializer,Deserialize};
@@ -16,6 +16,8 @@ use xml::reader::{EventReader, XmlEvent};
 use links::{Link,load_links,LinkType};
 use serde_json;
 use rusqlite;
+
+type Gloss=String;
 
 /// A WordNet part of speech
 #[derive(Clone,Debug)]
@@ -488,7 +490,7 @@ impl WordNet {
                              |s| { serde_json::from_str(&s) })
     }
     pub fn get_by_lemma(&self, lemma : &str) -> Result<Vec<Synset>,WordNetLoadError> { 
-        sqlite_query_vec("SELECT json FROM synsets
+        sqlite_query_vec("SELECT DISTINCT json FROM synsets
                           JOIN lemmas ON lemmas.synset=synsets.key
                           WHERE lemma=?",
                           &[&lemma.to_owned()],
@@ -590,7 +592,7 @@ impl WordNet {
         let mut synset_to_entry = HashMap::new();
         let mut sense_to_lemma = HashMap::new();
         let mut sense_to_synset = HashMap::new();
-        let mut forms = Vec::new();
+        let mut entry_id_to_forms = HashMap::new();
         let mut subcats = HashMap::new();
         let mut synset = None;
         let mut synset_id = None;
@@ -637,7 +639,12 @@ impl WordNet {
                         }
                     } else if name.local_name == "Form" {
                         if let Some(f) = attr_value(&attributes, "writtenForm") {
-                            forms.push(f);
+                            let entry_id = lexical_entry_id.clone()
+                                .ok_or(WordNetLoadError::Schema(
+                                            "Form outside of LexicalEntry"))?;
+                            entry_id_to_forms.entry(entry_id)
+                                .or_insert_with(|| Vec::new())
+                                .push(f);
                         }
                     } else if name.local_name == "Sense" {
                         let entry_id = match lexical_entry_id {
@@ -741,7 +748,6 @@ impl WordNet {
                     if name.local_name == "LexicalEntry" {
                         lexical_entry_id = None;
                         entry_lemma = None;
-                        forms.clear();
                     } else if name.local_name == "Sense" {
                         synset = None;
                     } else if name.local_name == "Synset" {
@@ -758,7 +764,9 @@ impl WordNet {
                                     lemma: entry_id_to_lemma.get(x)
                                         .expect("Entry must have lemma")
                                         .clone(),
-                                    forms: forms.clone(),
+                                    forms: entry_id_to_forms.get(x)
+                                        .map(|x| x.clone())
+                                        .unwrap_or_else(|| Vec::new()),
                                     sense_key: sense_keys[x][&ssid].clone(),
                                     subcats: subcats.get(x)
                                         .map(|x| x.clone())
@@ -835,25 +843,6 @@ impl WordNet {
 
         wordnet.finalize()
     }
-}
-
-fn build_glosstags(wordnet : &mut WordNetBuilder)
-         -> Result<(), WordNetLoadError> {
-    eprintln!("Loading gloss tags (adj)");
-    let mut result = read_glosstag_corpus("data/merged/adj.xml", &wordnet)?;
-    eprintln!("Loading gloss tags (adv)");
-    result.extend(read_glosstag_corpus("data/merged/adv.xml", &wordnet)?);
-    eprintln!("Loading gloss tags (noun)");
-    result.extend(read_glosstag_corpus("data/merged/noun.xml", &wordnet)?);
-    eprintln!("Loading gloss tags (verb)");
-    result.extend(read_glosstag_corpus("data/merged/verb.xml", &wordnet)?);
-    for (k,v) in result.iter() {
-        if let Some(mut s) = wordnet.get_synset(k)? {
-            s.gloss = Some(v.clone());
-            wordnet.update_synset(k.clone(), s)?;
-        }
-    }
-    Ok(())
 }
 
 fn build_tab<P : AsRef<Path>>(file : P, 
