@@ -12,7 +12,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate handlebars;
-extern crate sled;
+extern crate rusqlite;
 
 mod wordnet;
 mod glosstag;
@@ -26,8 +26,9 @@ use std::process::exit;
 use rocket::State;
 use rocket::Response;
 use rocket::Request;
+use rocket::config::{Environment, Config as RocketConfig};
 use rocket::request::{FromRequest,Outcome};
-use rocket::http::hyper::header::Location;
+use rocket::http::hyper::header::{Location,CacheDirective,CacheControl};
 use rocket::Outcome::Success;
 use rocket::http::{ContentType, Status};
 use std::io::Cursor;
@@ -74,7 +75,7 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
 
 #[get("/ttl/<index>/<name>")]
 fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, &'static str> {
+        -> Result<Response<'r>, String> {
     Ok(Response::build()
        .header(ContentType::new("text","turtle"))
        .sized_body(Cursor::new(
@@ -87,7 +88,7 @@ fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String)
 
 #[get("/rdf/<index>/<name>")]
 fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, &'static str> {
+        -> Result<Response<'r>, String> {
     Ok(Response::build()
        .header(ContentType::new("application","rdf+xml"))
        .sized_body(Cursor::new(
@@ -102,7 +103,7 @@ fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String)
 
 #[get("/xml/<index>/<name>")]
 fn get_xml<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, &'static str> {
+        -> Result<Response<'r>, String> {
     Ok(Response::build()
        .header(ContentType::XML)
        .sized_body(Cursor::new(
@@ -117,6 +118,7 @@ fn get_xml<'r>(state : State<WordNetState>, index : String, name : String)
 fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
     Ok(Response::build()
         .header(ContentType::GIF)
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
         .sized_body(File::open(&format!("flags/{}.gif", code))?)
         .finalize())
 }
@@ -126,44 +128,58 @@ fn get_static<'r>(name : String) -> Response<'r> {
     if name == "app.js" {
         Response::build()
             .header(ContentType::JavaScript)
-            .sized_body(File::open("src/app.js").unwrap())
-//            .sized_body(Cursor::new(include_str!("app.js")))
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("app.js")))
+            //.sized_body(File::open("src/app.js").unwrap())
             .finalize()
     } else if name == "favicon.ico" {
         Response::build()
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            //.sized_body(Cursor::new(include_str!("favicon.ico")))
             .sized_body(File::open("src/favicon.ico").unwrap())
             .finalize()
     } else if name == "synset.html" {
         Response::build()
-            .sized_body(File::open("src/synset.html").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("synset.html")))
+            //.sized_body(File::open("src/synset.html").unwrap())
             .finalize()
     } else if name == "wordnet.html" {
         Response::build()
-            .sized_body(File::open("src/wordnet.html").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("wordnet.html")))
+            //.sized_body(File::open("src/wordnet.html").unwrap())
             .finalize()
     } else if name == "relation.html" {
         Response::build()
-            .sized_body(File::open("src/relation.html").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("relation.html")))
+            //.sized_body(File::open("src/relation.html").unwrap())
             .finalize()
     } else if name == "princeton.png" {
         Response::build()
             .header(ContentType::PNG)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/princeton.png").unwrap())
             .finalize()
     } else if name == "verbnet.gif" {
         Response::build()
             .header(ContentType::GIF)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/verbnet.gif").unwrap())
             .finalize()
     } else if name == "wikipedia.png" {
         Response::build()
             .header(ContentType::PNG)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/wikipedia.png").unwrap())
             .finalize()
     } else if name == "wn.css" {
         Response::build()
             .header(ContentType::CSS)
-            .sized_body(File::open("src/wn.css").unwrap())
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("wn.css")))
+            //.sized_body(File::open("src/wn.css").unwrap())
             .finalize()
     } else {
         Response::build()
@@ -173,23 +189,29 @@ fn get_static<'r>(name : String) -> Response<'r> {
 }
 
 fn get_synsets(wordnet : &WordNet, index : &str, id : &str) 
-        -> Result<Vec<Synset>, &'static str> {
+        -> Result<Vec<Synset>, String> {
     let wn = if index == "id" {
         vec![wordnet.get_synset(&WNKey::from_str(id)
-                .map_err(|_| "Not a WordNet ID")?)
-            .ok_or("Synset Not Found")?.clone()]
+                .map_err(|_| format!("Not a WordNet ID"))?)
+            .map_err(|e| format!("Database error: {}", e))?
+            .ok_or(format!("Synset Not Found"))?.clone()]
     } else if index == "lemma" {
-        wordnet.get_by_lemma(id).iter().map(|x| (*x).clone()).collect()
+        wordnet.get_by_lemma(id)
+            .map_err(|e| format!("Database error: {}", e))?
+            .iter().map(|x| (*x).clone()).collect()
     } else if index == "ili" {
         vec![wordnet.get_by_ili(id)
-                .ok_or("Synset Not Found")?.clone()]
+                .map_err(|e| format!("Database Error: {}", e))?
+                .ok_or(format!("Synset Not Found"))?.clone()]
     } else if index == "sense_key" {
         vec![wordnet.get_by_sense_key(id)
-                .ok_or("Synset Not Found")?.clone()]
+                .map_err(|e| format!("Database Error: {}", e))?
+                .ok_or(format!("Synset Not Found"))?.clone()]
      } else {
         vec![wordnet.get_by_old_id(index, &WNKey::from_str(id)
-                .map_err(|_| "Not a WordNet Key")?)?
-                .ok_or("Synset Not Found")?.clone()]
+                .map_err(|_| format!("Not a WordNet Key"))?)
+                .map_err(|e| format!("Database Error: {}", e))?
+                .ok_or(format!("Synset Not Found"))?.clone()]
     };
     Ok(wn)
 }
@@ -197,10 +219,31 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
 #[get("/json/<index>/<id>")]
 fn synset<'r>(index : String, id : String, 
               status : State<WordNetState>) 
-        -> Result<Response<'r>,&'static str> {
+        -> Result<Response<'r>,String> {
     let synsets = get_synsets(&status.wordnet, &index, &id)?;
     let json = serde_json::to_string(&synsets)
-        .map_err(|_| "Failed to serialize synset")?;
+        .map_err(|e| format!("Failed to serialize synset: {}", e))?;
+    Ok(Response::build()
+        .sized_body(Cursor::new(json))
+        .finalize())
+}
+
+#[get("/json_rel/<id>")]
+fn rel_targets<'r>(id : String, status : State<WordNetState>) -> Result<Response<'r>,String> {
+    let synset = status.wordnet.get_synset(&WNKey::from_str(&id)
+                .map_err(|_| format!("Not a WordNet ID"))?)
+            .map_err(|e| format!("Database error: {}", e))?
+            .ok_or(format!("Synset Not Found"))?;
+    let mut targets = Vec::new();
+    for rel in synset.relations {
+        if let Some(ss) = status.wordnet.get_synset(&WNKey::from_str(&rel.target)
+            .map_err(|_| format!("WordNet ID link not valid!"))?)
+            .map_err(|_| format!("Could not read WordNet"))? {
+            targets.push(ss);
+        }
+    }
+    let json = serde_json::to_string(&targets)
+        .map_err(|e| format!("Failed to serialize synset: {}", e))?;
     Ok(Response::build()
         .sized_body(Cursor::new(json))
         .finalize())
@@ -225,20 +268,20 @@ fn autocomplete_wn_key(k : &str) -> Result<WNKey, &'static str> {
 
 #[get("/autocomplete/<index>/<key>")]
 fn autocomplete_lemma(index : String, key : String, 
-        state : State<WordNetState>) -> Result<String, &'static str> {
+        state : State<WordNetState>) -> Result<String, String> {
     let mut results = Vec::new();
     if index == "lemma" {
-        for s in state.wordnet.list_by_lemma(&key, 10) {
-            if s.starts_with(&key) {
+        for s in state.wordnet.list_by_lemma(&key, 10).map_err(|e| format!("Database error: {}", e))? {
+//            if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
                     item: s.to_string()
                 })
-            }
+//            }
         }   
     } else if index == "id" {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.list_by_id(&key2, 10) {
+        for s in state.wordnet.list_by_id(&key2, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -247,7 +290,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
     } else if index == "ili" {
-        for s in state.wordnet.list_by_ili(&key, 10) {
+        for s in state.wordnet.list_by_ili(&key, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -256,7 +299,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
      } else if index == "sense_key" {
-        for s in state.wordnet.list_by_sense_key(&key, 10) {
+        for s in state.wordnet.list_by_sense_key(&key, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -266,7 +309,7 @@ fn autocomplete_lemma(index : String, key : String,
         }   
      } else {
         let key2 = autocomplete_wn_key(&key)?;
-        for s in state.wordnet.list_by_old_id(&index, &key2, 10)? {
+        for s in state.wordnet.list_by_old_id(&index, &key2, 10).map_err(|e| format!("Database error: {}", e))? {
             if s.to_string().starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -275,7 +318,7 @@ fn autocomplete_lemma(index : String, key : String,
             }
         }   
 }
-    serde_json::to_string(&results).map_err(|_| "Could not translate to JSON")
+    serde_json::to_string(&results).map_err(|e| format!("Json error: {}", e))
 }
 
 enum ContentNegotiation { Html, RdfXml, Turtle, Json }
@@ -416,22 +459,27 @@ fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiat
 #[get("/")]
 fn index<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/index.html").unwrap())
-        //.sized_body(Cursor::new(include_str!("index.html")))
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/index.html").unwrap())
+        .sized_body(Cursor::new(include_str!("index.html")))
         .finalize()
 }
 
 #[get("/about")]
 fn about<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/about.html").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/about.html").unwrap())
+        .sized_body(Cursor::new(include_str!("about.html")))
         .finalize()
 }
 
 #[get("/license")]
 fn license<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/license.html").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/license.html").unwrap())
+        .sized_body(Cursor::new(include_str!("license.html")))
         .finalize()
 }
 
@@ -440,31 +488,47 @@ fn license<'r>() -> Response<'r> {
 fn ontology<'r>() -> Response<'r> {
     Response::build()
         .header(ContentType::new("application","rdf+xml"))
-        .sized_body(File::open("src/ontology.rdf").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/ontology.rdf").unwrap())
+        .sized_body(Cursor::new(include_str!("ontology.rdf")))
         .finalize()
 }
 
 #[get("/ontology.html")]
 fn ontology_html<'r>() -> Response<'r> {
     Response::build()
-        .sized_body(File::open("src/ontology.html").unwrap())
+        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+        //.sized_body(File::open("src/ontology.html").unwrap())
+        .sized_body(Cursor::new(include_str!("ontology.html")))
         .finalize()
 }
 
         
-
+#[derive(Clone)]
 struct Config {
     wn_file : String,
+<<<<<<< HEAD
+=======
+    reload : bool,
+>>>>>>> ba6f663a78ee778ae34f4dc2e0de929ed8bf48cb
     port : u16
 }
 
 impl Config {
     fn new(matches : &ArgMatches) -> Result<Config, &'static str> {
         let wn_file = matches.value_of("wn").unwrap_or("data/wn31.xml");
+<<<<<<< HEAD
         let port = u16::from_str(matches.value_of("port").unwrap_or("8000"))
             .map_err(|_| "Port is not a number")?;
         Ok(Config {
             wn_file: wn_file.to_string(),
+=======
+        let port = str::parse::<u16>(matches.value_of("port").unwrap_or("8000"))
+            .map_err(|_| "Port must be an integer")?;
+        Ok(Config {
+            wn_file: wn_file.to_string(),
+            reload: matches.is_present("reload"),
+>>>>>>> ba6f663a78ee778ae34f4dc2e0de929ed8bf48cb
             port: port
         })
     }
@@ -509,9 +573,20 @@ fn prepare_server(config : &Config) -> Result<WordNetState, String> {
         .expect("Could not load rdfxml.hbs");
     handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
     handlebars.register_helper("long_pos", Box::new(long_pos));
+<<<<<<< HEAD
     eprintln!("Loading WordNet data");
     let wordnet = WordNet::load(config.wn_file.clone())
       .map_err(|e| format!("Failed to load WordNet: {}", e))?;
+=======
+    let wordnet = if config.reload  {
+        eprintln!("Loading WordNet data");
+        WordNet::load(config.wn_file)
+      .map_err(|e| format!("Failed to load WordNet: {}", e))?
+    } else {
+        eprintln!("Opening WordNet data");
+        WordNet::new()
+    };
+>>>>>>> ba6f663a78ee778ae34f4dc2e0de929ed8bf48cb
     // Quick loading code for testing
     //let mut wordnet = WordNet {
     //    synsets : HashMap::new(),
@@ -561,6 +636,7 @@ fn prepare_server(config : &Config) -> Result<WordNetState, String> {
     //    links: vec![links::Link { link_type: links::LinkType::Wikipedia, target: "Cat".to_string()}]
     //});
     //wordnet.by_lemma.insert("cat".to_string(), vec![WNKey::from_str("00001740-n").unwrap()]);
+    eprintln!("WordNet loaded");
     Ok(WordNetState {
         wordnet: wordnet,
         handlebars: handlebars
@@ -572,11 +648,14 @@ fn main() {
         .version("1.0")
         .author("John P. McCrae <john@mccr.ae>")
         .about("WordNet Angular Interface")
+        .arg(Arg::with_name("reload")
+             .long("reload")
+             .help("Reload the indexes from the sources")
+             .takes_value(false))
         .arg(Arg::with_name("port")
-             .long("port")
              .short("p")
-             .value_name("PORT_NUMBER")
-             .help("The port to run the server on. Default=8000")
+             .value_name("port")
+             .help("The port to start the server on")
              .takes_value(true))
         .arg(Arg::with_name("wn")
             .long("wn")
@@ -586,15 +665,17 @@ fn main() {
     let matches = app.clone().get_matches();
     match Config::new(&matches) {
         Ok(config) => 
-            match prepare_server(&config) {
+            match prepare_server(config.clone()) {
                 Ok(state) => {
-                    rocket::custom(RocketConfig::build(Environment::Development)
-                                   .port(config.port)
-                                   .finalize().expect("Could not configure Rocket"), true)
+                    rocket::custom(
+                        RocketConfig::build(Environment::Staging)
+                                .port(config.port)
+                                .finalize()
+                                .expect("Could not configure Rocket"), false)
                         .manage(state)
                         .mount("/", routes![
                                 about, ontology, ontology_html, license,
-                                get_xml, get_ttl, get_rdf,
+                                get_xml, get_ttl, get_rdf, rel_targets,
                                 index, synset, get_flag,
                                 autocomplete_lemma, get_static,
                                 lemma, id, ili, sense_key, 

@@ -2,13 +2,16 @@
     <a href="#" ng-click="$ctrl.show = !$ctrl.show">{{$ctrl.fullname}} ({{($ctrl.relations|filter:{'rel_type':$ctrl.relation}).length}})</a></div>
 <span ng-repeat="relation in $ctrl.relations | filter:{'rel_type':$ctrl.relation}" ng-show="$ctrl.show">
     <div ng-if="relation.src_word" class="relation-word">
+        <span ng-repeat="synset in $ctrl.targetsynsets | filter:{'id':relation.target}">
         From {{relation.src_word}}:
-<synset2 target="relation.target" display="$ctrl.display"
-focus="relation.trg_word"></synset2>
+            <synset2 synset="synset" display="$ctrl.display"
+                                     focus="relation.trg_word"></synset2>
+        </span>
     </div>
     <div ng-if="!relation.src_word">
-<synset2 target="relation.target" display="$ctrl.display"
-focus="relation.trg_word"></synset2>
+        <span ng-repeat="synset in $ctrl.targetsynsets | filter:{'id':relation.target}">
+            <synset2 synset="synset" display="$ctrl.display"
+                                     focus="relation.trg_word"></synset2>
+        </span>
     </div>
 </span>
-
