@@ -26,7 +26,6 @@ use std::process::exit;
 use rocket::State;
 use rocket::Response;
 use rocket::Request;
-use rocket::config::{Environment, Config as RocketConfig};
 use rocket::request::{FromRequest,Outcome};
 use rocket::http::hyper::header::{Location,CacheDirective,CacheControl};
 use rocket::Outcome::Success;
@@ -553,7 +552,7 @@ fn long_pos(h : &handlebars::Helper,
 }
 
 
-fn prepare_server(config : &Config) -> Result<WordNetState, String> {
+fn prepare_server(config : Config) -> Result<WordNetState, String> {
     let mut handlebars = Handlebars::new();
     handlebars.register_template_string("xml", include_str!("xml.hbs"))
         .expect("Could not load xml.hbs");

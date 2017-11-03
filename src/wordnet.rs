@@ -590,6 +590,7 @@ impl WordNet {
         let mut synset_to_entry = HashMap::new();
         let mut sense_to_lemma = HashMap::new();
         let mut sense_to_synset = HashMap::new();
+        let mut forms = Vec::new();
         let mut subcats = HashMap::new();
         let mut synset = None;
         let mut synset_id = None;
@@ -633,6 +634,10 @@ impl WordNet {
                         entry_id_to_lemma.insert(entry_id, lemma.clone());
                         if !lemma_skiplist.contains(&lemma) {
                             lemma_skiplist.insert(lemma);
+                        }
+                    } else if name.local_name == "Form" {
+                        if let Some(f) = attr_value(&attributes, "writtenForm") {
+                            forms.push(f);
                         }
                     } else if name.local_name == "Sense" {
                         let entry_id = match lexical_entry_id {
@@ -736,6 +741,7 @@ impl WordNet {
                     if name.local_name == "LexicalEntry" {
                         lexical_entry_id = None;
                         entry_lemma = None;
+                        forms.clear();
                     } else if name.local_name == "Sense" {
                         synset = None;
                     } else if name.local_name == "Synset" {
@@ -752,8 +758,7 @@ impl WordNet {
                                     lemma: entry_id_to_lemma.get(x)
                                         .expect("Entry must have lemma")
                                         .clone(),
-                                    // TODO
-                                    forms: Vec::new(),
+                                    forms: forms.clone(),
                                     sense_key: sense_keys[x][&ssid].clone(),
                                     subcats: subcats.get(x)
                                         .map(|x| x.clone())
