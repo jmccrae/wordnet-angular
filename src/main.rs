@@ -507,28 +507,18 @@ fn ontology_html<'r>() -> Response<'r> {
 #[derive(Clone)]
 struct Config {
     wn_file : String,
-<<<<<<< HEAD
-=======
     reload : bool,
->>>>>>> ba6f663a78ee778ae34f4dc2e0de929ed8bf48cb
     port : u16
 }
 
 impl Config {
     fn new(matches : &ArgMatches) -> Result<Config, &'static str> {
         let wn_file = matches.value_of("wn").unwrap_or("data/wn31.xml");
-<<<<<<< HEAD
-        let port = u16::from_str(matches.value_of("port").unwrap_or("8000"))
-            .map_err(|_| "Port is not a number")?;
-        Ok(Config {
-            wn_file: wn_file.to_string(),
-=======
         let port = str::parse::<u16>(matches.value_of("port").unwrap_or("8000"))
             .map_err(|_| "Port must be an integer")?;
         Ok(Config {
             wn_file: wn_file.to_string(),
             reload: matches.is_present("reload"),
->>>>>>> ba6f663a78ee778ae34f4dc2e0de929ed8bf48cb
             port: port
         })
     }
@@ -573,11 +563,6 @@ fn prepare_server(config : &Config) -> Result<WordNetState, String> {
         .expect("Could not load rdfxml.hbs");
     handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
     handlebars.register_helper("long_pos", Box::new(long_pos));
-<<<<<<< HEAD
-    eprintln!("Loading WordNet data");
-    let wordnet = WordNet::load(config.wn_file.clone())
-      .map_err(|e| format!("Failed to load WordNet: {}", e))?;
-=======
     let wordnet = if config.reload  {
         eprintln!("Loading WordNet data");
         WordNet::load(config.wn_file)
@@ -586,7 +571,6 @@ fn prepare_server(config : &Config) -> Result<WordNetState, String> {
         eprintln!("Opening WordNet data");
         WordNet::new()
     };
->>>>>>> ba6f663a78ee778ae34f4dc2e0de929ed8bf48cb
     // Quick loading code for testing
     //let mut wordnet = WordNet {
     //    synsets : HashMap::new(),
