@@ -400,6 +400,14 @@ impl WordNetBuilder {
     /// Add a link set to the database
     pub fn insert_links(&mut self, link_type : LinkType,
                         values : Vec<(WNKey, String)>) -> Result<(), WordNetLoadError> {
+        for &(ref key, ref target) in values.iter() {
+            if let Some(synset) = self.synsets.get_mut(key) {
+                synset.links.push(Link {
+                    link_type: link_type.clone(),
+                    target: target.clone()
+                })
+            }
+        }
         let tx = self.conn.transaction()?;
         for (key, target) in values {
             tx.execute("INSERT INTO links VALUES (?1, ?2, ?3)",
