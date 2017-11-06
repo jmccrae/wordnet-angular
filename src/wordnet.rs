@@ -4,7 +4,6 @@
 use omwn::load_omwn;
 use serde::de::{Visitor, Deserializer, Error as DeError};
 use serde::{Serialize, Serializer,Deserialize};
-use stable_skiplist::OrderedSkipList;
 use std::collections::HashMap;
 use std::fmt::{Formatter, Result as FormatResult};
 use std::fs::{File};
@@ -422,6 +421,13 @@ impl WordNetBuilder {
     /// Add a set of old links to the database
     pub fn set_old_ids(&mut self, index : &str, values : Vec<(WNKey, WNKey)>)
         -> Result<(),WordNetLoadError> {
+         for &(ref old, ref new) in values.iter() {
+             if let Some(synset) = self.synsets.get_mut(new) {
+                 synset.old_keys.entry(index.to_owned())
+                     .or_insert_with(|| Vec::new())
+                     .push(old.clone());
+             }
+         }
          if index == "pwn30" {
              for &(ref k, ref v) in values.iter() {
                  self.by_pwn30.insert(k.clone(), v.clone());
@@ -492,6 +498,12 @@ impl WordNet {
 
     pub fn new() -> WordNet { WordNet { } }
  
+    #[allow(dead_code)]
+    pub fn get_synset_ids(&self) -> Result<Vec<WNKey>,WordNetLoadError> {
+        sqlite_query_vec("SELECT DISTINCT key FROM synsets",
+                         &[], |s| { WNKey::from_str(&s) })
+    }
+
     pub fn get_synset(&self, key : &WNKey) -> Result<Option<Synset>,WordNetLoadError> { 
         sqlite_query_opt_map("SELECT json FROM synsets WHERE key=?",
                              &[&key.to_string()],
@@ -610,8 +622,6 @@ impl WordNet {
         let mut synsets = HashMap::new();
         let mut relations : HashMap<WNKey,Vec<Relation>> = HashMap::new();
 
-        let mut lemma_skiplist = OrderedSkipList::new();
-
         for e in parse {
             match e {
                 Ok(XmlEvent::StartElement{ name, attributes, .. }) => {
@@ -642,9 +652,6 @@ impl WordNet {
                         };
                         entry_lemma = Some(lemma.clone());
                         entry_id_to_lemma.insert(entry_id, lemma.clone());
-                        if !lemma_skiplist.contains(&lemma) {
-                            lemma_skiplist.insert(lemma);
-                        }
                     } else if name.local_name == "Form" {
                         if let Some(f) = attr_value(&attributes, "writtenForm") {
                             let entry_id = lexical_entry_id.clone()

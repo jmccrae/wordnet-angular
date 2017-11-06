@@ -1,11 +1,12 @@
 use std::path::Path;
 use wordnet::{WNKey,WordNetLoadError,WordNetBuilder};
-use std::collections::HashMap;
+use std::collections::{HashMap,HashSet};
 use std::io::{BufRead,BufReader};
 use std::fs::{read_dir,File};
 use xml::reader::{EventReader, XmlEvent};
 use std::str::FromStr;
 use std::ffi::OsStr;
+use std::iter::FromIterator;
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub enum LinkType { VerbNet, W3C, Wikipedia }
@@ -24,16 +25,17 @@ pub fn load_links(wordnet : &mut WordNetBuilder) -> Result<(), WordNetLoadError>
             eprintln!("Failed to load VerbNet: {}", e);
             HashMap::new()
         });
-        let mut links = Vec::new();
+        let mut links = HashSet::new();
         for (sense_key, vs) in verbs {
             if let Some(key) = wordnet.get_id_by_sense_key(&sense_key)? {
                 for v in vs {
-                    links.push((key.clone(), v));
+                    links.insert((key.clone(), v));
                     //wordnet.insert_link(&key, LinkType::VerbNet, v)?;
                 }
             }
         }
-        wordnet.insert_links(LinkType::VerbNet, links)?;
+        
+        wordnet.insert_links(LinkType::VerbNet, Vec::from_iter(links))?;
     }
     {
         eprintln!("Loading W3C Links");

@@ -180,6 +180,11 @@ fn get_static<'r>(name : String) -> Response<'r> {
             .sized_body(Cursor::new(include_str!("wn.css")))
             //.sized_body(File::open("src/wn.css").unwrap())
             .finalize()
+    } else if name == "wordnet.nt.gz" {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("wordnet.nt.gz").unwrap())
+            .finalize()
     } else {
         Response::build()
             .status(Status::NotFound)

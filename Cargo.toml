@@ -3,6 +3,14 @@ name = "wordnet-angular"
 version = "0.1.0"
 authors = ["John McCrae <john@mccr.ae>"]
 
+[[bin]]
+name = "wordnet-angular"
+path = "src/main.rs"
+
+[[bin]]
+name = "wordnet-rdf-dump"
+path = "src/dump.rs"
+
 [dependencies]
 rocket = "0.3.3"
 rocket_codegen = "0.3.3"

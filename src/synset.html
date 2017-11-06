@@ -8,11 +8,11 @@
     <div class="lemmas">
         <span class="pos">({{$ctrl.synset.pos}})</span>
         <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
-            <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-show="!$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
-            <span class="forms" ng-show="$ctrl.display.forms">
+            <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-if="!$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
+            <!--<span class="forms" ng-show="$ctrl.display.forms">
                 <span class="form" ng-repeat="form in sense.forms">{{form}}</span>
-            </span>
-            <span ng-bind="sense.sense_key" class="sense_key" ng-show="$ctrl.display.sensekeys"></span><span ng-show="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
+            </span>-->
+            <span ng-bind="sense.sense_key" class="sense_key" ng-if="$ctrl.display.sensekeys"></span><span ng-if="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
         </span>
         <span ng-if="$ctrl.synset.gloss === null" ng-bind="$ctrl.synset.definition" class="definition"></span>
         <span ng-if="$ctrl.synset.gloss" class="definition">
@@ -86,22 +86,22 @@
                 </span>
             </span>
          </span>
-        <div class="foreign">
+         <div class="foreign">
             <div ng-repeat="(lang, words) in $ctrl.synset.foreign">
                 <img ng-src="/flag/{{lang}}" ng-if="$ctrl.display['lang_'+lang]"/>
                 <span ng-repeat="word in words" ng-if="$ctrl.display['lang_'+lang]">{{word}}{{$last ? '' : ', '}}</span>
             </div>
         </div>
-        <div ng-show="$ctrl.display.topics" class="topic">
+        <div ng-if="$ctrl.display.topics" class="topic">
             <b>Topic: </b> {{$ctrl.synset.subject}}
         </div>
-        <div ng-show="$ctrl.display.subcats" class="subcats">
-            <b ng-show="$ctrl.hasSubcats()">Subcategorization Frames:</b>
-            <ul ng-repeat="sense in $ctrl.synset.lemmas" ng-show="$ctrl.hasSubcats()">
+        <div ng-if="$ctrl.display.subcats" class="subcats">
+            <b ng-if="$ctrl.hasSubcats()">Subcategorization Frames:</b>
+            <ul ng-repeat="sense in $ctrl.synset.lemmas" ng-if="$ctrl.hasSubcats()">
             <li class="subcat" ng-repeat="subcat in sense.subcats">{{subcat.replace('%s', sense.lemma)}}</span>
             </ul>
         </div>
-        <ul ng-show="$ctrl.display.wn30 || $ctrl.display.wn_old" class="old_ids">
+        <ul ng-if="$ctrl.display.wn30 || $ctrl.display.wn_old" class="old_ids">
             <li ng-show="$ctrl.display.wn30" ng-repeat="id in $ctrl.synset.old_keys.pwn30">WordNet 3.0: {{id}}</li>
             <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn21">WordNet 2.1: {{id}}</li>
             <li ng-show="$ctrl.display.wn_old" ng-repeat="id in $ctrl.synset.old_keys.pwn20">WordNet 2.0: {{id}}</li>
@@ -239,7 +239,8 @@
                 targetsynsets="$ctrl.targetsynsets"
                 relations="$ctrl.synset.relations"
                 fullname="Verb groups"></relation>
-
+            <a class="btn" href="#" ng-show="$ctrl.targetsynsetsextra.length > 0"
+               ng-click="$ctrl.extendtargetsynsets()">Load More</a>
         </div>
 
         <div class="more">

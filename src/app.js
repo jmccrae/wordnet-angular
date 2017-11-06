@@ -72,7 +72,8 @@ angular.module('app').component('synset', {
             ctrl.targetsynsets = [];
             $http.get("/json_rel/" + this.synset.id).then(
                     function(response) {
-                        ctrl.targetsynsets = response.data;
+                        ctrl.targetsynsets = response.data.slice(0,25);
+                        ctrl.targetsynsetsextra = response.data.slice(25,response.data.length);
                     }, function(response) { alert(response); }
             );
             ctrl.hasSubcats = function() {
@@ -85,6 +86,11 @@ angular.module('app').component('synset', {
             };
             ctrl.underlineSubcat = function(subcat, lemma) {
                 return subcat.replace('%s', '<span class="underline">' + lemma + '</span>');
+            };
+            ctrl.extendtargetsynsets = function() {
+                ctrl.targetsynsets = ctrl.targetsynsets.concat(
+                        ctrl.targetsynsetsextra.slice(0,25));
+                ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(25,ctrl.targetsynsetsextra.length);
             };
         }
     });
@@ -101,7 +107,8 @@ angular.module('app').component('synset2', {
         ctrl.targetsynsets = [];
         $http.get("/json_rel/" + this.synset.id).then(
                 function(response) {
-                    ctrl.targetsynsets = response.data;
+                    ctrl.targetsynsets = response.data.slice(0,50);
+                    ctrl.targetsynsetsextra = response.data.slice(50,response.data.length);
                 }, function(response) { alert(response); }
         );
         ctrl.hasSubcats = function() {
@@ -115,7 +122,12 @@ angular.module('app').component('synset2', {
         ctrl.underlineSubcat = function(subcat, lemma) {
             return subcat.replace('%s', '<span class="underline">' + lemma + '</span>');
         };
-    }
+        ctrl.extendtargetsynsets = function() {
+            ctrl.targetsynsets = ctrl.targetsynsets.concat(
+                    ctrl.targetsynsetsextra.slice(0,25));
+            ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(25,ctrl.targetsynsetsextra.length);
+        };
+ }
     //,
 //    controller: function($http) {
 //        var ctrl = this;

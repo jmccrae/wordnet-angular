@@ -34,6 +34,10 @@ pub fn load_omwn<P: AsRef<Path>>(p : P, wordnet : &WordNetBuilder)
             }
         }
     }
+    for (_, v) in result.iter_mut() {
+        v.sort();
+        v.dedup();
+    }
     Ok(result)
 }
 
