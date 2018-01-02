@@ -195,3 +195,4 @@ div.option_panel_internal {
 .definition:hover a {
     border-bottom: 1px dotted #999;
 }
+.md-virtual-repeat-container .md-autocomplete-suggestions-container { position: fixed; bottom: 50px !important; height: initial !important; max-height: 99999999px !important; }
