@@ -1,0 +1,210 @@
+body {
+    font-family: 'Dosis', sans-serif;
+    border-top: 4px solid #671d5b;
+  margin-bottom: 60px;
+}
+.footer {
+  height: 100px;
+  padding: 20px;
+  font-size: 12px;
+  text-align:right;
+  font-family: 'Arvo', serif;
+
+}
+wordnet .row {
+    min-height:700px;
+}
+h1 {
+    font-family: 'Arvo', serif;
+    font-weight: 700;
+    color: #184165;
+}
+
+.poly-title {
+    line-height: 1.1em;
+    padding-left: 20px;
+    font-size: 42pt;
+}
+
+h3 {
+    font-family: 'Arvo', serif;
+    font-size: 30px;
+}
+
+.relation-title {
+    font-family: 'Arvo', serif;
+    font-size: 1.1em;
+}
+
+.synset {
+    padding-left:15px;
+    padding-bottom:10px;
+}
+
+.lemmas {
+    font-size: 14pt;
+}
+
+.definition:before {
+    content: ' - ';
+}
+
+.definition {
+    font-size: 0.8em;
+    color: #777;
+    font-style: italic;
+}
+
+.sense_key:before {
+    content: '(';
+}
+
+.sense_key:after {
+    content: ')';
+}
+
+.sense_key {
+    color: #aaa;
+    font-family: 'Scope One', monospace;
+}
+
+.synset-id {
+    font-size: 16pt;
+}
+
+.identifier {
+    font-family: 'Scope One', monospace;
+}
+
+.more {
+    padding-top:5px;
+    padding-left:20px;
+    font-size: 16px;
+    text-decoration: none;
+}
+
+.more a {
+    color: black;
+}
+
+.more:hover {
+    text-decoration: underline;
+}
+
+.relations {
+    padding-left:30px;
+}
+
+.relation-word {
+    padding-left:30px;
+}
+
+.pos {
+    color: firebrick;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.synset-id hr {
+    margin-top:2px;
+    margin-bottom:2px;
+}
+
+.relation-title a {
+    text-decoration:none;
+    color:black;
+}
+
+.relation-title a:hover {
+    text-decoration: underline;
+}
+
+.lemma a {
+    color:black;
+}
+
+.topic {
+    margin-left:25px;
+}
+
+.subcats {
+    margin-left:25px;
+}
+.pos_grp h3:only-child {
+    display:none;
+}
+
+.option_panel {
+    clear:both;
+    background-color:#444;
+    color: #eee;
+}
+
+.option_panel_internal table {
+    width: 100%;
+}
+
+div.option_panel_internal {
+    padding: 10px;
+}
+
+.option_panel .md-icon {
+    border-color: #ccc !important;
+}
+
+.option_panel md-checkbox.md-checked .md-icon {
+    background-color: #671d5b !important;
+}
+
+.option_button {
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+    margin-left:0px;
+    margin-right:0px;
+    border-radius:0px;
+}
+
+.option_button_selected {
+    background-color: #444;
+    color:#eee;
+}
+
+.option_button_selected:hover {
+    background-color: #444 !important;
+    color:#eee;
+}
+.gloss_word {
+    position: relative;
+    display: inline-block;
+}
+
+/* Tooltip text */
+.gloss_word .gloss_details {
+    visibility: hidden;
+    width: 200px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+ 
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.gloss_word:hover .gloss_details {
+    visibility: visible;
+}
+
+.gloss_word a {
+    text-decoration: none;
+    color: #777;
+}
+
+.definition:hover a {
+    border-bottom: 1px dotted #999;
+}

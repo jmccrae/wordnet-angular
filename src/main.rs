@@ -123,7 +123,7 @@ fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
 }
 
 #[get("/static/<name>")]
-fn get_static<'r>(name : String) -> Response<'r> {
+fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
     if name == "app.js" {
         Response::build()
             .header(ContentType::JavaScript)
@@ -135,7 +135,10 @@ fn get_static<'r>(name : String) -> Response<'r> {
         Response::build()
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             //.sized_body(Cursor::new(include_str!("favicon.ico")))
-            .sized_body(File::open("src/favicon.ico").unwrap())
+            .sized_body(match state.site {
+                WordNetSite::Princeton => File::open("src/favicon.ico").unwrap(),
+                WordNetSite::Polylingual => File::open("src/polyling-favicon.ico").unwrap()
+            })
             .finalize()
     } else if name == "synset.html" {
         Response::build()
@@ -173,17 +176,29 @@ fn get_static<'r>(name : String) -> Response<'r> {
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/wikipedia.png").unwrap())
             .finalize()
-    } else if name == "wn.css" {
+    } else if name == "wn.css" && state.site == WordNetSite::Princeton {
         Response::build()
             .header(ContentType::CSS)
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(Cursor::new(include_str!("wn.css")))
             //.sized_body(File::open("src/wn.css").unwrap())
             .finalize()
-    } else if name == "wordnet.nt.gz" {
+    } else if name == "wordnet.nt.gz" && state.site == WordNetSite::Princeton {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(File::open("wordnet.nt.gz").unwrap())
+            .finalize()
+    } else if name == "polylingwn.css" && state.site == WordNetSite::Polylingual {
+        Response::build()
+            .header(ContentType::CSS)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("polylingwn.css")))
+            .finalize()
+    } else if name == "polylingwn.png" && state.site == WordNetSite::Polylingual {
+        Response::build()
+            .header(ContentType::PNG)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(File::open("src/polylingwn.png").unwrap())
             .finalize()
     } else {
         Response::build()
@@ -350,7 +365,7 @@ impl<'a,'r> FromRequest<'a,'r> for ContentNegotiation {
 }
     
 
-fn negotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) -> Response<'r> {
+fn negotiated<'r>(state : State<WordNetState>, idx : &'static str, key : String, neg : ContentNegotiation) -> Response<'r> {
     if key.ends_with(".rdf") {
         renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
     } else if key.ends_with(".ttl") {
@@ -361,7 +376,7 @@ fn negotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) ->
         renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Html)
     } else {
         match neg {
-            ContentNegotiation::Html => { index() },
+            ContentNegotiation::Html => { index(state) },
             ContentNegotiation::RdfXml => {
                 Response::build()
                     .status(Status::SeeOther)
@@ -426,25 +441,25 @@ fn renegotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) 
 
 
 #[get("/lemma/<key>")]
-fn lemma<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("lemma", key, neg) }
+fn lemma<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma", key, neg) }
 #[get("/id/<key>")]
-fn id<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("id", key, neg) }
+fn id<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "id", key, neg) }
 #[get("/ili/<key>")]
-fn ili<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("ili", key, neg) }
+fn ili<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "ili", key, neg) }
 #[get("/sense_key/<key>")]
-fn sense_key<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("sense_key", key, neg) }
+fn sense_key<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "sense_key", key, neg) }
 #[get("/pwn30/<key>")]
-fn pwn30<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn30", key, neg) }
+fn pwn30<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn30", key, neg) }
 #[get("/pwn21/<key>")]
-fn pwn21<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn21", key, neg) }
+fn pwn21<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn21", key, neg) }
 #[get("/pwn20/<key>")]
-fn pwn20<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn20", key, neg) }
+fn pwn20<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn20", key, neg) }
 #[get("/pwn171/<key>")]
-fn pwn171<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn171", key, neg) }
+fn pwn171<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn171", key, neg) }
 #[get("/pwn17/<key>")]
-fn pwn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn17", key, neg) }
+fn pwn17<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn17", key, neg) }
 #[get("/pwn16/<key>")]
-fn pwn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { negotiated("pwn16", key, neg) }
+fn pwn16<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn16", key, neg) }
 #[get("/wn31/<key>")]
 fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("id", key[1..key.len()].to_string(), neg) }
 #[get("/wn30/<key>")]
@@ -461,11 +476,14 @@ fn wn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiat
 fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn16", key, neg) }
 
 #[get("/")]
-fn index<'r>() -> Response<'r> {
+fn index<'r>(state : State<WordNetState>) -> Response<'r> {
     Response::build()
         .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
         //.sized_body(File::open("src/index.html").unwrap())
-        .sized_body(Cursor::new(include_str!("index.html")))
+        .sized_body(match state.site {
+            WordNetSite::Princeton => Cursor::new(include_str!("index.html")),
+            WordNetSite::Polylingual => Cursor::new(include_str!("polyling-index.html"))
+        })
         .finalize()
 }
 
@@ -512,7 +530,8 @@ fn ontology_html<'r>() -> Response<'r> {
 struct Config {
     wn_file : String,
     reload : bool,
-    port : u16
+    port : u16,
+    site : WordNetSite
 }
 
 impl Config {
@@ -520,17 +539,24 @@ impl Config {
         let wn_file = matches.value_of("wn").unwrap_or("data/wn31.xml");
         let port = str::parse::<u16>(matches.value_of("port").unwrap_or("8000"))
             .map_err(|_| "Port must be an integer")?;
+        let site = match matches.value_of("site").unwrap_or("princeton") {
+            "princeton" => WordNetSite::Princeton,
+            "polylingual" => WordNetSite::Polylingual,
+            _ => return Err("Bad site")
+        };
         Ok(Config {
             wn_file: wn_file.to_string(),
             reload: matches.is_present("reload"),
-            port: port
+            port: port,
+            site: site
         })
     }
 }
 
 struct WordNetState {
     wordnet: WordNet,
-    handlebars: Handlebars
+    handlebars: Handlebars,
+    site : WordNetSite
 }
 
 fn lemma_escape(h : &handlebars::Helper,
@@ -627,8 +653,15 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     eprintln!("WordNet loaded");
     Ok(WordNetState {
         wordnet: wordnet,
-        handlebars: handlebars
+        handlebars: handlebars,
+        site: config.site
     })
+}
+
+#[derive(Clone,Debug,PartialEq)]
+enum WordNetSite {
+    Princeton,
+    Polylingual
 }
 
 fn main() {
@@ -644,6 +677,11 @@ fn main() {
              .short("p")
              .value_name("port")
              .help("The port to start the server on")
+             .takes_value(true))
+        .arg(Arg::with_name("site")
+             .short("s")
+             .value_name("princeton|polylingual")
+             .help("The site design to use")
              .takes_value(true))
         .arg(Arg::with_name("wn")
             .long("wn")
