@@ -50,9 +50,13 @@ angular.module('app').controller('SearchController',
         }
         self.selectedItemChange(self.selectedItem);
     }
-    self.querySearch = function (query) {
-        return $http.get("/autocomplete/"+ self.index + "/"+ query).then(
+    self.querySearch = function (query, $timeout) {
+       return $http.get("/autocomplete/"+ self.index + "/"+ query).then(
             function(result) {
+                // See https://github.com/angular/material/issues/6668
+                var outerContainer = document.querySelector('.md-autocomplete-suggestions-container');
+                var innerContainer = document.querySelector('.md-virtual-repeat-sizer');
+                outerContainer.style.height = innerContainer.style.height;
                 return result.data;
             }, function(response) {
                 console.log(response.data);
