@@ -460,8 +460,23 @@ fn pwn171<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiatio
 fn pwn17<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn17", key, neg) }
 #[get("/pwn16/<key>")]
 fn pwn16<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn16", key, neg) }
+fn is_old_wn_key(s : &str) -> bool {
+    if s.len() == 10 {
+        (0usize..8usize).all(|i| s.as_bytes()[i] >= 48 && s.as_bytes()[i] <= 57)
+    } else if s.len() == 11 {
+        (0usize..9usize).all(|i| s.as_bytes()[i] >= 48 && s.as_bytes()[i] <= 57)
+    } else {
+        false
+    }
+}
 #[get("/wn31/<key>")]
-fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("id", key[1..key.len()].to_string(), neg) }
+fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { 
+    if is_old_wn_key(&key) {
+        renegotiated("id", key[1..key.len()].to_string(), neg) 
+    } else {
+        renegotiated("lemma", key[..(key.len()-1)].to_string(), neg)
+    }
+}
 #[get("/wn30/<key>")]
 fn wn30<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn30", key, neg) }
 #[get("/wn21/<key>")]
@@ -474,6 +489,13 @@ fn wn171<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotia
 fn wn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn17", key, neg) }
 #[get("/wn16/<key>")]
 fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn16", key, neg) }
+#[get("/wn31.nt.gz")]
+fn wn31ntgz<'r>() -> Response<'r> {
+    Response::build()
+        .status(Status::SeeOther)
+        .header(Location("/static/wordnet.nt.gz"))
+        .finalize()
+}
 
 #[get("/")]
 fn index<'r>(state : State<WordNetState>) -> Response<'r> {
