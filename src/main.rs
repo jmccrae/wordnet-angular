@@ -474,7 +474,7 @@ fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> {
     if is_old_wn_key(&key) {
         renegotiated("id", key[1..key.len()].to_string(), neg) 
     } else {
-        renegotiated("lemma", key[..(key.len()-1)].to_string(), neg)
+        renegotiated("lemma", key[..(key.len()-2)].to_string(), neg)
     }
 }
 #[get("/wn30/<key>")]
@@ -493,7 +493,7 @@ fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiat
 fn wn31ntgz<'r>() -> Response<'r> {
     Response::build()
         .status(Status::SeeOther)
-        .header(Location("/static/wordnet.nt.gz"))
+        .header(Location("/static/wordnet.nt.gz".to_owned()))
         .finalize()
 }
 
