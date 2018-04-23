@@ -27,6 +27,7 @@
 {{#each entries}}{{#each this}}
 <#{{lemma_escape lemmas.0.lemma}}-{{id}}>
 {{#each relations}}{{#if src_word}} wn:{{rel_type}} <http://wordnet-rdf.princeton.edu/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
+   ontolex:isLexicalizedSenseOf pwnid:{{id}}
    a ontolex:LexicalSense .
 {{/each}}{{/each}}
 

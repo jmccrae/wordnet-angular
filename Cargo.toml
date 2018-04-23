@@ -12,8 +12,9 @@ name = "wordnet-rdf-dump"
 path = "src/dump.rs"
 
 [dependencies]
-rocket = "0.3.6"
-rocket_codegen = "0.3.6"
+rocket = "0.3.8"
+rocket_codegen = "0.3.8"
+pear_codegen = "0.0.16"
 stable-skiplist = "0.1.1"
 xml-rs = "0.6"
 quick-error = "1.2.1"
