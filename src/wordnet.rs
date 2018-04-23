@@ -547,7 +547,7 @@ impl WordNet {
     pub fn get_by_old_id(&self, index : &str, id : &WNKey) -> Result<Option<Synset>,WordNetLoadError> {
         sqlite_query_opt_map("SELECT json FROM synsets
                               JOIN old_keys ON old_keys.synset=synsets.key
-                              WHERE key=? AND idx=?",
+                              WHERE old_keys.key=? AND idx=?",
                              &[&id.to_string(), &index.to_string()],
                              |s| { serde_json::from_str(&s) })
     }

@@ -78,7 +78,7 @@ angular.module('app').component('synset', {
                     function(response) {
                         ctrl.targetsynsets = response.data.slice(0,25);
                         ctrl.targetsynsetsextra = response.data.slice(25,response.data.length);
-                    }, function(response) { alert(response); }
+                    }, function(response) { /*alert(response);*/ }
             );
             ctrl.hasSubcats = function() {
                 for(i = 0; i < this.synset.lemmas.length; i++) {
@@ -113,7 +113,7 @@ angular.module('app').component('synset2', {
                 function(response) {
                     ctrl.targetsynsets = response.data.slice(0,50);
                     ctrl.targetsynsetsextra = response.data.slice(50,response.data.length);
-                }, function(response) { alert(response); }
+                }, function(response) { /*alert(response);*/ }
         );
         ctrl.hasSubcats = function() {
             for(i = 0; i < this.synset.lemmas.length; i++) {

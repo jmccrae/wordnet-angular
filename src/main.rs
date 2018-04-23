@@ -728,7 +728,7 @@ fn main() {
                                 autocomplete_lemma, get_static,
                                 lemma, id, ili, sense_key, 
                                 wn30, wn21, wn20, wn17,
-                                wn171, wn16, wn31,
+                                wn171, wn16, wn31, wn31ntgz,
                                 pwn30, pwn21, pwn20, pwn17,
                                 pwn171, pwn16]).launch();
                 },
