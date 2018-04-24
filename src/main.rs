@@ -243,6 +243,7 @@ fn synset<'r>(index : String, id : String,
     let json = serde_json::to_string(&synsets)
         .map_err(|e| format!("Failed to serialize synset: {}", e))?;
     Ok(Response::build()
+        .header(ContentType::JSON)
         .sized_body(Cursor::new(json))
         .finalize())
 }
@@ -264,6 +265,7 @@ fn rel_targets<'r>(id : String, status : State<WordNetState>) -> Result<Response
     let json = serde_json::to_string(&targets)
         .map_err(|e| format!("Failed to serialize synset: {}", e))?;
     Ok(Response::build()
+        .header(ContentType::JSON)
         .sized_body(Cursor::new(json))
         .finalize())
 }
@@ -715,6 +717,7 @@ fn main() {
         Ok(config) => 
             match prepare_server(config.clone()) {
                 Ok(state) => {
+                    eprintln!("Starting at port {}", config.port);
                     rocket::custom(
                         RocketConfig::build(Environment::Staging)
                                 .port(config.port)
