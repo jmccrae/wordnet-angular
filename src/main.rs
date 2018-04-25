@@ -14,6 +14,7 @@ extern crate serde_derive;
 extern crate handlebars;
 extern crate rusqlite;
 
+mod wordnet_model;
 mod wordnet;
 //mod glosstag;
 mod omwn;
@@ -21,7 +22,8 @@ mod links;
 mod wordnet_read;
 
 use std::str::FromStr;
-use wordnet::{WNKey, WordNet, Synset};
+use wordnet::{WNKey, WordNet};
+use wordnet_model::Synset;
 use clap::{App, Arg, ArgMatches};
 use std::process::exit;
 use rocket::State;
@@ -611,7 +613,7 @@ fn long_pos(h : &handlebars::Helper,
         .and_then(|v| {
             let v2 = v.value().as_str()
                 .ok_or_else(|| handlebars::RenderError::new("No parameter value for pos long"))?;
-            wordnet::PartOfSpeech::from_str(v2)
+            wordnet_model::PartOfSpeech::from_str(v2)
                 .map_err(|e| handlebars::RenderError::new(&format!("{}", e)))
         })?;
     rc.writer.write(param.as_long_string().as_bytes().as_ref())?;

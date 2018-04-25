@@ -1,3 +1,4 @@
+//! Code for loading wordnets from disk
 use omwn::load_omwn;
 use std::collections::HashMap;
 use std::fs::{File};
@@ -5,8 +6,8 @@ use std::io::{BufRead,BufReader};
 use std::path::Path;
 use xml::reader::{EventReader, XmlEvent};
 use links::{load_links};
-use wordnet::{WordNetLoadError,WordNetBuilder,Sense,Synset,Relation,WNKey,
-WordNet,PartOfSpeech};
+use wordnet::{WordNetLoadError,WordNetBuilder,WNKey, WordNet};
+use wordnet_model::{Sense,Synset,Relation,PartOfSpeech};
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 
@@ -16,9 +17,12 @@ fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String
 
 fn clean_id(s : &str) -> Result<WNKey, WordNetLoadError> {
     let s2 : String = s.chars().skip(5).collect();
-    WNKey::from_str(&s2)
+    //WNKey::from_str(&s2)
+    Ok(s2)
 }
 
+/// Load a Princeton WordNet-style GWN XML file and associated elements into
+/// the database
 pub fn load_pwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> {
     let file = BufReader::new(File::open(path)?);
 
@@ -294,7 +298,8 @@ fn build_tab<P : AsRef<Path>>(file : P,
                         let wnid2 = wordnet.get_id_by_ili(ili)?.map(|x| x.clone());
                         match wnid2 {
                             Some(wnid) => {
-                                values.push((WNKey::from_str(id)?, wnid));
+//                                values.push((WNKey::from_str(id)?, wnid));
+                                values.push((id.to_string(), wnid));
                             },
                             None => {}
                         };

@@ -11,10 +11,12 @@ extern crate handlebars;
 extern crate rusqlite;
 
 mod wordnet;
+mod wordnet_model;
 mod omwn;
 mod links;
 
-use wordnet::{WNKey,Synset,WordNet};
+use wordnet::{WNKey,WordNet};
+use wordnet_model::Synset;
 use std::collections::HashMap;
 use clap::{App};
 use handlebars::{Handlebars};
@@ -108,7 +110,7 @@ fn long_pos(h : &handlebars::Helper,
         .and_then(|v| {
             let v2 = v.value().as_str()
                 .ok_or_else(|| handlebars::RenderError::new("No parameter value for pos long"))?;
-            wordnet::PartOfSpeech::from_str(v2)
+            wordnet_model::PartOfSpeech::from_str(v2)
                 .map_err(|e| handlebars::RenderError::new(&format!("{}", e)))
         })?;
     rc.writer.write(param.as_long_string().as_bytes().as_ref())?;

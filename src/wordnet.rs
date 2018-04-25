@@ -1,230 +1,112 @@
 //! Functions for handling the in-memory model of WordNet and loading it form
 //! disk
 //use glosstag::{Gloss,build_glosstags};
-use serde::de::{Visitor, Deserializer, Error as DeError};
-use serde::{Serialize, Serializer,Deserialize};
 use std::collections::HashMap;
-use std::fmt::{Formatter, Result as FormatResult};
-use std::str::FromStr;
 use links::{Link,LinkType};
 use serde_json;
 use rusqlite;
+use wordnet_model::{Synset};
 
-type Gloss=String;
-
-/// A WordNet part of speech
-#[derive(Clone,Debug)]
-pub enum PartOfSpeech {
-    Noun, Verb, Adjective, Adverb, AdjectiveSatellite, Other
-}
-
-impl FromStr for PartOfSpeech {
-    type Err = WordNetLoadError;
-    fn from_str(s : &str) -> Result<PartOfSpeech, WordNetLoadError> { 
-        match s {
-            "n" => Ok(PartOfSpeech::Noun),
-            "v" => Ok(PartOfSpeech::Verb),
-            "a" => Ok(PartOfSpeech::Adjective),
-            "s" => Ok(PartOfSpeech::AdjectiveSatellite),
-            "r" => Ok(PartOfSpeech::Adverb),
-            "x" => Ok(PartOfSpeech::Other),
-            _ => Err(WordNetLoadError::Schema("Bad part of speech value"))
-        }
-    }
-}
-
-impl ToString for PartOfSpeech {
-    fn to_string(&self) -> String {
-        match *self {
-            PartOfSpeech::Noun => "n".to_string(),
-            PartOfSpeech::Verb => "v".to_string(),
-            PartOfSpeech::Adjective => "a".to_string(),
-            PartOfSpeech::AdjectiveSatellite => "s".to_string(),
-            PartOfSpeech::Adverb => "r".to_string(),
-            PartOfSpeech::Other => "x".to_string()
-        }
-    }
-}
-
-impl PartOfSpeech {
-    pub fn as_long_string(&self) -> &'static str {
-        match *self {
-            PartOfSpeech::Noun => "noun",
-            PartOfSpeech::Verb => "verb",
-            PartOfSpeech::Adjective => "adjective",
-            PartOfSpeech::AdjectiveSatellite => "adjective_satellite",
-            PartOfSpeech::Adverb => "adverb",
-            PartOfSpeech::Other => "other"
-        }
-    }
-}
-
-impl Serialize for PartOfSpeech {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer {
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-impl<'de> Deserialize<'de> for PartOfSpeech {
-    fn deserialize<D>(deserializer: D) -> Result<PartOfSpeech, D::Error>
-        where D: Deserializer<'de> {
-        deserializer.deserialize_str(PartOfSpeechVisitor)        
-    }
-}
-
-struct PartOfSpeechVisitor;
-
-impl<'de> Visitor<'de> for PartOfSpeechVisitor {
-    type Value = PartOfSpeech;
-
-    fn expecting(&self, formatter : &mut Formatter) -> FormatResult {
-        formatter.write_str("A part of speech value as a single letter: n,v,a,r,s or x")
-    }
-
-    fn visit_str<E>(self, value : &str) -> Result<PartOfSpeech, E>  where E : DeError {
-        PartOfSpeech::from_str(value)
-            .map_err(|e| E::custom(e))
-    }
-
-    fn visit_string<E>(self, value : String) -> Result<PartOfSpeech, E> where E : DeError {
-        PartOfSpeech::from_str(&value)
-            .map_err(|e| E::custom(e))
-    }
-}
+pub type WNKey=String;
 
 
-
-
-/// A WordNet Key consisting of 8 digits and a part of speech.
-/// This data structure stores the value as a 4-byte integer to save memory
-#[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd)]
-pub struct WNKey(u32);
-
-//impl WNKey {
-//    /// Create from an ID and a part of speech
-//    pub fn new(id : u32, pos : char) -> Result<WNKey, WordNetLoadError> {
-//        match pos {
-//            'n' => Ok(WNKey((id << 8) + 1)),
-//            'v' => Ok(WNKey((id << 8) + 2)),
-//            'a' => Ok(WNKey((id << 8) + 3)),
-//            'r' => Ok(WNKey((id << 8) + 4)),
-//            's' => Ok(WNKey((id << 8) + 5)),
-//            'p' => Ok(WNKey((id << 8) + 6)),
-//            'x' => Ok(WNKey((id << 8) + 7)),
-//            _ => Err(WordNetLoadError::BadKey(format!("Bad WN POS: {}", pos)))
+///// A WordNet Key consisting of 8 digits and a part of speech.
+///// This data structure stores the value as a 4-byte integer to save memory
+//#[derive(Clone,Debug,PartialEq,Eq,Hash,PartialOrd)]
+//pub struct WNKey(u32);
+//
+////impl WNKey {
+////    /// Create from an ID and a part of speech
+////    pub fn new(id : u32, pos : char) -> Result<WNKey, WordNetLoadError> {
+////        match pos {
+////            'n' => Ok(WNKey((id << 8) + 1)),
+////            'v' => Ok(WNKey((id << 8) + 2)),
+////            'a' => Ok(WNKey((id << 8) + 3)),
+////            'r' => Ok(WNKey((id << 8) + 4)),
+////            's' => Ok(WNKey((id << 8) + 5)),
+////            'p' => Ok(WNKey((id << 8) + 6)),
+////            'x' => Ok(WNKey((id << 8) + 7)),
+////            _ => Err(WordNetLoadError::BadKey(format!("Bad WN POS: {}", pos)))
+////        }
+////    }
+////        
+////    pub fn from_slice(slice : &[u8]) -> Result<WNKey, WordNetLoadError> {
+////        let s = String::from_utf8(Vec::from(slice))
+////            .map_err(|_| WordNetLoadError::BadKey(format!("Invalid UTF-8")))?;
+////        WNKey::from_str(&s)
+////    }
+////}
+//
+//impl FromStr  for WNKey {
+//    type Err = WordNetLoadError;
+//    fn from_str(s : &str) -> Result<WNKey, WordNetLoadError> { 
+//        if s.len() != 10 {
+//            Err(WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))
+//        } else {
+//            let num = u32::from_str(&s.chars().take(8).collect::<String>())
+//                .map_err(|_| WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))? << 8;
+//            match s.chars().skip(9).next() {
+//                Some('n') => Ok(WNKey(0x00000001 | num)),
+//                Some('v') => Ok(WNKey(0x00000002 | num)),
+//                Some('a') => Ok(WNKey(0x00000003 | num)),
+//                Some('r') => Ok(WNKey(0x00000004 | num)),
+//                Some('s') => Ok(WNKey(0x00000005 | num)),
+//                Some('p') => Ok(WNKey(0x00000006 | num)),
+//                Some('x') => Ok(WNKey(0x00000007 | num)),
+//                _ => Err(WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))
+//            }
 //        }
 //    }
-//        
-//    pub fn from_slice(slice : &[u8]) -> Result<WNKey, WordNetLoadError> {
-//        let s = String::from_utf8(Vec::from(slice))
-//            .map_err(|_| WordNetLoadError::BadKey(format!("Invalid UTF-8")))?;
-//        WNKey::from_str(&s)
+//}
+//
+//impl ToString for WNKey {
+//    fn to_string(&self) -> String { 
+//        match self.0 & 0x0000000f {
+//            1 => format!("{:08}-n", (self.0 & 0xfffffff0) >> 8),
+//            2 => format!("{:08}-v", (self.0 & 0xfffffff0) >> 8),
+//            3 => format!("{:08}-a", (self.0 & 0xfffffff0) >> 8),
+//            4 => format!("{:08}-r", (self.0 & 0xfffffff0) >> 8),
+//            5 => format!("{:08}-s", (self.0 & 0xfffffff0) >> 8),
+//            6 => format!("{:08}-p", (self.0 & 0xfffffff0) >> 8),
+//            7 => format!("{:08}-x", (self.0 & 0xfffffff0) >> 8),
+//            _ => format!("{:08}-?", (self.0 & 0xfffffff0) >> 8)
+//        }
 //    }
 //}
-
-impl FromStr  for WNKey {
-    type Err = WordNetLoadError;
-    fn from_str(s : &str) -> Result<WNKey, WordNetLoadError> { 
-        if s.len() != 10 {
-            Err(WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))
-        } else {
-            let num = u32::from_str(&s.chars().take(8).collect::<String>())
-                .map_err(|_| WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))? << 8;
-            match s.chars().skip(9).next() {
-                Some('n') => Ok(WNKey(0x00000001 | num)),
-                Some('v') => Ok(WNKey(0x00000002 | num)),
-                Some('a') => Ok(WNKey(0x00000003 | num)),
-                Some('r') => Ok(WNKey(0x00000004 | num)),
-                Some('s') => Ok(WNKey(0x00000005 | num)),
-                Some('p') => Ok(WNKey(0x00000006 | num)),
-                Some('x') => Ok(WNKey(0x00000007 | num)),
-                _ => Err(WordNetLoadError::BadKey(format!("Bad WN Key: {}", s)))
-            }
-        }
-    }
-}
-
-impl ToString for WNKey {
-    fn to_string(&self) -> String { 
-        match self.0 & 0x0000000f {
-            1 => format!("{:08}-n", (self.0 & 0xfffffff0) >> 8),
-            2 => format!("{:08}-v", (self.0 & 0xfffffff0) >> 8),
-            3 => format!("{:08}-a", (self.0 & 0xfffffff0) >> 8),
-            4 => format!("{:08}-r", (self.0 & 0xfffffff0) >> 8),
-            5 => format!("{:08}-s", (self.0 & 0xfffffff0) >> 8),
-            6 => format!("{:08}-p", (self.0 & 0xfffffff0) >> 8),
-            7 => format!("{:08}-x", (self.0 & 0xfffffff0) >> 8),
-            _ => format!("{:08}-?", (self.0 & 0xfffffff0) >> 8)
-        }
-    }
-}
-
-impl Serialize for WNKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer {
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-impl<'de> Deserialize<'de> for WNKey {
-    fn deserialize<D>(deserializer: D) -> Result<WNKey, D::Error>
-        where D: Deserializer<'de> {
-        deserializer.deserialize_str(WNKeyVisitor)        
-    }
-}
-
-struct WNKeyVisitor;
-
-impl<'de> Visitor<'de> for WNKeyVisitor {
-    type Value = WNKey;
-
-    fn expecting(&self, formatter : &mut Formatter) -> FormatResult {
-        formatter.write_str("A WordNet key such as 00001740-a")
-    }
-
-    fn visit_str<E>(self, value : &str) -> Result<WNKey, E>  where E : DeError {
-        WNKey::from_str(value)
-            .map_err(|e| E::custom(e))
-    }
-
-    fn visit_string<E>(self, value : String) -> Result<WNKey, E> where E : DeError {
-        WNKey::from_str(&value)
-            .map_err(|e| E::custom(e))
-    }
-}
-
-#[derive(Clone,Debug,Serialize,Deserialize)]
-pub struct Synset {
-    pub definition : String,
-    pub lemmas : Vec<Sense>,
-    pub id : WNKey,
-    pub ili : String,
-    pub pos : PartOfSpeech,
-    pub subject : String,
-    pub relations : Vec<Relation>,
-    pub old_keys : HashMap<String, Vec<WNKey>>,
-    pub gloss : Option<Vec<Gloss>>,
-    pub foreign : HashMap<String, Vec<String>>,
-    pub links : Vec<Link>
-}
-
-#[derive(Clone,Debug,Serialize,Deserialize)]
-pub struct Sense {
-    pub lemma : String,
-    pub language : String,
-    pub forms : Vec<String>,
-    pub sense_key : String,
-    pub subcats : Vec<String>
-}
-
-#[derive(Clone,Debug,Serialize,Deserialize)]
-pub struct Relation {
-    pub src_word : Option<String>,
-    pub trg_word : Option<String>,
-    pub rel_type : String,
-    pub target : String
-}
+//
+//impl Serialize for WNKey {
+//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//        where S: Serializer {
+//        serializer.serialize_str(&self.to_string())
+//    }
+//}
+//
+//impl<'de> Deserialize<'de> for WNKey {
+//    fn deserialize<D>(deserializer: D) -> Result<WNKey, D::Error>
+//        where D: Deserializer<'de> {
+//        deserializer.deserialize_str(WNKeyVisitor)        
+//    }
+//}
+//
+//struct WNKeyVisitor;
+//
+//impl<'de> Visitor<'de> for WNKeyVisitor {
+//    type Value = WNKey;
+//
+//    fn expecting(&self, formatter : &mut Formatter) -> FormatResult {
+//        formatter.write_str("A WordNet key such as 00001740-a")
+//    }
+//
+//    fn visit_str<E>(self, value : &str) -> Result<WNKey, E>  where E : DeError {
+//        WNKey::from_str(value)
+//            .map_err(|e| E::custom(e))
+//    }
+//
+//    fn visit_string<E>(self, value : String) -> Result<WNKey, E> where E : DeError {
+//        WNKey::from_str(&value)
+//            .map_err(|e| E::custom(e))
+//    }
+//}
 
 fn sqlite_query_opt_map<F,A,E>(query : &str, values : &[&rusqlite::types::ToSql],
                              foo : F) -> Result<Option<A>,WordNetLoadError> 
@@ -476,6 +358,10 @@ impl WordNetBuilder {
     }
 }
 
+fn ok_wnkey(s : String) -> Result<String, ::std::io::Error> {
+    Ok(s)
+}
+
 impl WordNet {
     fn open_conn() -> Result<rusqlite::Connection,WordNetLoadError> {
         rusqlite::Connection::open("wordnet.db")            
@@ -487,7 +373,7 @@ impl WordNet {
     #[allow(dead_code)]
     pub fn get_synset_ids(&self) -> Result<Vec<WNKey>,WordNetLoadError> {
         sqlite_query_vec("SELECT DISTINCT key FROM synsets",
-                         &[], |s| { WNKey::from_str(&s) })
+                         &[], ok_wnkey)
     }
 
     pub fn get_synset(&self, key : &WNKey) -> Result<Option<Synset>,WordNetLoadError> { 
@@ -544,8 +430,8 @@ impl WordNet {
                           WHERE key >= ?
                           ORDER BY key
                           LIMIT ?",
-                         &[&key.to_string(), &limit],
-                         |s| { WNKey::from_str(&s) })
+                         &[&key.to_string(), &limit],ok_wnkey)
+                         // |s| { WNKey::from_str(&s) })
     }
     pub fn list_by_lemma(&self, lemma : &String, language : &str,
                           limit : u32) -> Result<Vec<String>,WordNetLoadError> {
@@ -584,7 +470,7 @@ impl WordNet {
                           ORDER BY key
                           LIMIT ?",
                          &[&key.to_string(), &index.to_string(), &limit], 
-                         |s| { WNKey::from_str(&s) })
+                         ok_wnkey)// { WNKey::from_str(&s) })
     }
 
 }
@@ -615,8 +501,8 @@ quick_error! {
             display("SQLite error: {}", err)
             cause(err)
         }
-        BadKey(msg : String) {
-            description(msg)
-        }
+//        BadKey(msg : String) {
+//            description(msg)
+//        }
     }
 }

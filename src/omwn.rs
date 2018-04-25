@@ -3,7 +3,6 @@ use std::path::Path;
 use std::collections::HashMap;
 use std::io::{BufRead,BufReader};
 use wordnet::{WNKey, WordNetLoadError, WordNetBuilder};
-use std::str::FromStr;
 
 pub fn load_omwn<P: AsRef<Path>>(p : P, wordnet : &WordNetBuilder)
         -> Result<HashMap<WNKey, Vec<String>>, WordNetLoadError> {
@@ -15,7 +14,8 @@ pub fn load_omwn<P: AsRef<Path>>(p : P, wordnet : &WordNetBuilder)
         if !line.starts_with("#") && line.len() > 0 {
             match elems.next() {
                 Some(wn30) => {
-                   let wn30key = WNKey::from_str(wn30)?;
+                   //let wn30key = WNKey::from_str(wn30)?;
+                   let wn30key = wn30.to_string();
                    elems.next().map(|t| {
                         elems.next().map(|v| {
                             if t.ends_with("lemma") {

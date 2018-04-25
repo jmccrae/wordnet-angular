@@ -4,7 +4,6 @@ use std::collections::{HashMap,HashSet};
 use std::io::{BufRead,BufReader};
 use std::fs::{read_dir,File};
 use xml::reader::{EventReader, XmlEvent};
-use std::str::FromStr;
 use std::ffi::OsStr;
 use std::iter::FromIterator;
 
@@ -133,7 +132,8 @@ fn load_w3c(wordnet : &WordNetBuilder) -> Result<HashMap<WNKey, String>,WordNetL
         let mut elems = line.split(",");
         if let Some(url) = elems.next() {
             if let Some(wn20) = elems.next() {
-                let wn20key = WNKey::from_str(wn20)?;
+                //let wn20key = WNKey::from_str(wn20)?;
+                let wn20key = wn20.to_string();
                 if let Some(wn30) = wordnet.get_id_by_pwn20(&wn20key)
                         .expect("WordNet 2.0 Index not loaded but loading W3C") {
                     map.insert(wn30.clone(), url[1..(url.len()-1)].to_string());
