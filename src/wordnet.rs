@@ -218,6 +218,7 @@ pub struct Synset {
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Sense {
     pub lemma : String,
+    pub language : String,
     pub forms : Vec<String>,
     pub sense_key : String,
     pub subcats : Vec<String>
@@ -289,9 +290,10 @@ impl WordNetBuilder {
         conn.execute("CREATE TABLE lemmas (
                       lemma TEXT NOT NULL,
                       form TEXT NOT NULL,
+                      language TEXT NOT NULL,
                       synset TEXT NOT NULL,
                       FOREIGN KEY (synset) REFERENCES synsets (key))", &[])?;
-        conn.execute("CREATE INDEX lemmas_form ON lemmas (form)", &[])?;
+        conn.execute("CREATE INDEX lemmas_form ON lemmas (form, language)", &[])?;
         conn.execute("CREATE INDEX lemmas_synset ON lemmas (synset)", &[])?;
         conn.execute("CREATE TABLE sense_keys (
                       sense_key TEXT NOT NULL,
@@ -364,11 +366,11 @@ impl WordNetBuilder {
                       VALUES (?1, ?2, ?3)",
                      &[&key_str, &synset.ili, &val_str])?;
         for sense in synset.lemmas {
-            tx.execute("INSERT INTO lemmas (lemma, form, synset) VALUES (?,?,?)", 
-                         &[&sense.lemma, &sense.lemma.to_lowercase(), &key_str])?;
+            tx.execute("INSERT INTO lemmas (lemma, form, language, synset) VALUES (?,?,?,?)", 
+                         &[&sense.lemma, &sense.lemma.to_lowercase(), &sense.language, &key_str])?;
             for form in sense.forms {
-                tx.execute("INSERT INTO lemmas (lemma, form, synset) VALUES (?,?,?)",
-                        &[&sense.lemma, &form.to_lowercase(), &key_str])?;
+                tx.execute("INSERT INTO lemmas (lemma, form, language, synset) VALUES (?,?,?,?)",
+                        &[&sense.lemma, &form.to_lowercase(), &sense.language, &key_str])?;
             }
             tx.execute("INSERT INTO sense_keys (sense_key, synset)
                           VALUES (?1, ?2)",
@@ -561,14 +563,15 @@ impl WordNet {
                          &[&key.to_string(), &limit],
                          |s| { WNKey::from_str(&s) })
     }
-    pub fn list_by_lemma(&self, lemma : &String,
+    pub fn list_by_lemma(&self, lemma : &String, language : &str,
                           limit : u32) -> Result<Vec<String>,WordNetLoadError> {
         sqlite_query_vec("SELECT DISTINCT lemma FROM lemmas
-                          WHERE form >= ? and form like ?
+                          WHERE form >= ? and form like ? and language=?
                           ORDER BY form
                           LIMIT ?",
                          &[&lemma.to_lowercase(), 
                             &(lemma.to_lowercase() + "%"),
+                            &language.to_string(),
                          &limit], 
                          ok_wordnet_str)
     }
@@ -779,6 +782,7 @@ impl WordNet {
                                     lemma: entry_id_to_lemma.get(x)
                                         .expect("Entry must have lemma")
                                         .clone(),
+                                    language: "en".to_string(),
                                     forms: entry_id_to_forms.get(x)
                                         .map(|x| x.clone())
                                         .unwrap_or_else(|| Vec::new()),

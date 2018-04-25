@@ -292,7 +292,7 @@ fn autocomplete_lemma(index : String, key : String,
         state : State<WordNetState>) -> Result<String, String> {
     let mut results = Vec::new();
     if index == "lemma" {
-        for s in state.wordnet.list_by_lemma(&key, 10).map_err(|e| format!("Database error: {}", e))? {
+        for s in state.wordnet.list_by_lemma(&key, "en", 10).map_err(|e| format!("Database error: {}", e))? {
 //            if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -300,6 +300,17 @@ fn autocomplete_lemma(index : String, key : String,
                 })
 //            }
         }   
+    } else if index.starts_with("lemma") {
+        let lang = index[6..].to_string();
+        for s in state.wordnet.list_by_lemma(&key, &lang, 10).map_err(|e| format!("Database error: {}", e))? {
+//            if s.starts_with(&key) {
+                results.push(AutocompleteResult {
+                    display: s.to_string(),
+                    item: s.to_string()
+                })
+//            }
+        }   
+ 
     } else if index == "id" {
         let key2 = autocomplete_wn_key(&key)?;
         for s in state.wordnet.list_by_id(&key2, 10).map_err(|e| format!("Database error: {}", e))? {
