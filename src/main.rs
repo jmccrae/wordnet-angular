@@ -18,6 +18,7 @@ mod wordnet;
 //mod glosstag;
 mod omwn;
 mod links;
+mod wordnet_read;
 
 use std::str::FromStr;
 use wordnet::{WNKey, WordNet, Synset};
@@ -630,7 +631,7 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     handlebars.register_helper("long_pos", Box::new(long_pos));
     let wordnet = if config.reload  {
         eprintln!("Loading WordNet data");
-        WordNet::load(config.wn_file)
+        wordnet_read::load_pwn(config.wn_file)
       .map_err(|e| format!("Failed to load WordNet: {}", e))?
     } else {
         eprintln!("Opening WordNet data");
