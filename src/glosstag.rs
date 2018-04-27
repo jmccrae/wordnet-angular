@@ -5,7 +5,6 @@ use xml::reader::{EventReader, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
 use wordnet::{WNKey, WordNetLoadError, WordNetBuilder};
-use std::str::FromStr;
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct GlossTagWord {
@@ -36,7 +35,7 @@ fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String
 }
 
 
-pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
+fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
         wordnet : &WordNetBuilder) -> Result<GlossTagCorpus, WordNetLoadError> {
     let file = BufReader::new(File::open(path)?);
 
@@ -62,7 +61,8 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "bad wn30 id"))?;
                     let num : String = wn30id.chars().skip(1).collect();
-                    let id = WNKey::from_str(&format!("{}-{}", num ,pos))?;
+                    //let id = WNKey::from_str(&format!("{}-{}", num ,pos))?;
+                    let id = format!("{}-{}", num, pos);
                     current_id = wordnet.get_id_by_pwn30(&id)
                         .expect("Loading gloss tags without WN 3.0 index")
                         .map(|x| x.clone());
@@ -148,7 +148,7 @@ pub fn read_glosstag_corpus<P : AsRef<Path>>(path : P,
     Ok(all_sents)
 }
 
-fn build_glosstags(wordnet : &mut WordNetBuilder)
+pub fn build_glosstags(wordnet : &mut WordNetBuilder)
          -> Result<(), WordNetLoadError> {
     eprintln!("Loading gloss tags (adj)");
     let mut result = read_glosstag_corpus("data/merged/adj.xml", &wordnet)?;

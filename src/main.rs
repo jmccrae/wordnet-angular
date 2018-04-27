@@ -16,7 +16,7 @@ extern crate rusqlite;
 
 mod wordnet_model;
 mod wordnet;
-//mod glosstag;
+mod glosstag;
 mod omwn;
 mod links;
 mod wordnet_read;
@@ -128,12 +128,22 @@ fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
 #[get("/static/<name>")]
 fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
     if name == "app.js" {
-        Response::build()
-            .header(ContentType::JavaScript)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(Cursor::new(include_str!("app.js")))
-            //.sized_body(File::open("src/app.js").unwrap())
-            .finalize()
+        if state.site == WordNetSite::Princeton {
+            Response::build()
+                .header(ContentType::JavaScript)
+                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+                .sized_body(Cursor::new(include_str!("app.js")))
+                //.sized_body(File::open("src/app.js").unwrap())
+                .finalize()
+        } else {
+            Response::build()
+                .header(ContentType::JavaScript)
+                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+                .sized_body(Cursor::new(include_str!("polyling-app.js")))
+                //.sized_body(File::open("src/app.js").unwrap())
+                .finalize()
+        }
+
     } else if name == "favicon.ico" {
         Response::build()
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
@@ -144,17 +154,33 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             })
             .finalize()
     } else if name == "synset.html" {
-        Response::build()
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(Cursor::new(include_str!("synset.html")))
-            //.sized_body(File::open("src/synset.html").unwrap())
-            .finalize()
+        if state.site == WordNetSite::Princeton {
+            Response::build()
+                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+                .sized_body(Cursor::new(include_str!("synset.html")))
+                //.sized_body(File::open("src/synset.html").unwrap())
+                .finalize()
+        } else {
+            Response::build()
+                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+                .sized_body(Cursor::new(include_str!("polyling-synset.html")))
+                //.sized_body(File::open("src/synset.html").unwrap())
+                .finalize()
+        }
     } else if name == "wordnet.html" {
-        Response::build()
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(Cursor::new(include_str!("wordnet.html")))
-            //.sized_body(File::open("src/wordnet.html").unwrap())
-            .finalize()
+        if state.site == WordNetSite::Princeton {
+            Response::build()
+                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+                .sized_body(Cursor::new(include_str!("wordnet.html")))
+                //.sized_body(File::open("src/wordnet.html").unwrap())
+                .finalize()
+        } else {
+            Response::build()
+                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+                .sized_body(Cursor::new(include_str!("polyling-wordnet.html")))
+                //.sized_body(File::open("src/wordnet.html").unwrap())
+                .finalize()
+        }
     } else if name == "relation.html" {
         Response::build()
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
@@ -218,7 +244,11 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
             .map_err(|e| format!("Database error: {}", e))?
             .ok_or(format!("Synset Not Found"))?.clone()]
     } else if index == "lemma" {
-        wordnet.get_by_lemma(id)
+        wordnet.get_by_lemma(id, "en")
+            .map_err(|e| format!("Database error: {}", e))?
+            .iter().map(|x| (*x).clone()).collect()
+    } else if index.starts_with("lemma") {
+        wordnet.get_by_lemma(id, &index[6..])
             .map_err(|e| format!("Database error: {}", e))?
             .iter().map(|x| (*x).clone()).collect()
     } else if index == "ili" {
@@ -458,6 +488,55 @@ fn renegotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) 
 
 #[get("/lemma/<key>")]
 fn lemma<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma", key, neg) }
+#[get("/lemma-en/<key>")]
+fn lemma_en<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-en", key, neg) }
+#[get("/lemma-bg/<key>")]
+fn lemma_bg<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-bg", key, neg) }
+#[get("/lemma-cs/<key>")]
+fn lemma_cs<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-cs", key, neg) }
+#[get("/lemma-da/<key>")]
+fn lemma_da<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-da", key, neg) }
+#[get("/lemma-de/<key>")]
+fn lemma_de<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-de", key, neg) }
+#[get("/lemma-el/<key>")]
+fn lemma_el<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-el", key, neg) }
+#[get("/lemma-es/<key>")]
+fn lemma_es<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-es", key, neg) }
+#[get("/lemma-et/<key>")]
+fn lemma_et<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-et", key, neg) }
+#[get("/lemma-fi/<key>")]
+fn lemma_fi<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-fi", key, neg) }
+#[get("/lemma-fr/<key>")]
+fn lemma_fr<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-fr", key, neg) }
+#[get("/lemma-ga/<key>")]
+fn lemma_ga<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-ga", key, neg) }
+#[get("/lemma-hr/<key>")]
+fn lemma_hr<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-hr", key, neg) }
+#[get("/lemma-hu/<key>")]
+fn lemma_hu<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-hu", key, neg) }
+#[get("/lemma-it/<key>")]
+fn lemma_it<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-it", key, neg) }
+#[get("/lemma-lt/<key>")]
+fn lemma_lt<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-lt", key, neg) }
+#[get("/lemma-lv/<key>")]
+fn lemma_lv<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-lv", key, neg) }
+#[get("/lemma-mt/<key>")]
+fn lemma_mt<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-mt", key, neg) }
+#[get("/lemma-nl/<key>")]
+fn lemma_nl<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-nl", key, neg) }
+#[get("/lemma-pl/<key>")]
+fn lemma_pl<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-pl", key, neg) }
+#[get("/lemma-pt/<key>")]
+fn lemma_pt<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-pt", key, neg) }
+#[get("/lemma-ro/<key>")]
+fn lemma_ro<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-ro", key, neg) }
+#[get("/lemma-sk/<key>")]
+fn lemma_sk<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-sk", key, neg) }
+#[get("/lemma-sl/<key>")]
+fn lemma_sl<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-sl", key, neg) }
+#[get("/lemma-sv/<key>")]
+fn lemma_sv<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-sv", key, neg) }
+
 #[get("/id/<key>")]
 fn id<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "id", key, neg) }
 #[get("/ili/<key>")]
@@ -633,8 +712,13 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     handlebars.register_helper("long_pos", Box::new(long_pos));
     let wordnet = if config.reload  {
         eprintln!("Loading WordNet data");
-        wordnet_read::load_pwn(config.wn_file)
-      .map_err(|e| format!("Failed to load WordNet: {}", e))?
+        if config.site == WordNetSite::Princeton {
+            wordnet_read::load_pwn(config.wn_file)
+                .map_err(|e| format!("Failed to load WordNet: {}", e))?
+        } else {
+            wordnet_read::load_gwn(config.wn_file)
+                .map_err(|e| format!("Failed to load WordNet: {}", e))?
+        }
     } else {
         eprintln!("Opening WordNet data");
         WordNet::new()
@@ -743,6 +827,12 @@ fn main() {
                                 get_xml, get_ttl, get_rdf, rel_targets,
                                 index, synset, get_flag,
                                 autocomplete_lemma, get_static,
+                                lemma_bg, lemma_cs, lemma_da, lemma_de,
+                                lemma_el, lemma_en, lemma_es, lemma_et,
+                                lemma_fi, lemma_fr, lemma_ga, lemma_hr,
+                                lemma_hu, lemma_it, lemma_lt, lemma_lv,
+                                lemma_mt, lemma_nl, lemma_pl, lemma_pt,
+                                lemma_ro, lemma_sk, lemma_sl, lemma_sv,
                                 lemma, id, ili, sense_key, 
                                 wn30, wn21, wn20, wn17,
                                 wn171, wn16, wn31, wn31ntgz,

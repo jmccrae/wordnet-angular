@@ -6,8 +6,8 @@ use wordnet::WordNetLoadError;
 use std::fmt::{Formatter, Result as FormatResult};
 use std::str::FromStr;
 use links::Link;
+use glosstag::Gloss;
 
-type Gloss=String;
 type WNKey=String;
 
 /// A WordNet part of speech
@@ -111,7 +111,7 @@ pub struct Sense {
     pub lemma : String,
     pub language : String,
     pub forms : Vec<String>,
-    pub sense_key : String,
+    pub sense_key : Option<String>,
     pub subcats : Vec<String>
 }
 

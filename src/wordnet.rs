@@ -248,9 +248,14 @@ impl WordNetBuilder {
                 tx.execute("INSERT INTO lemmas (lemma, form, language, synset) VALUES (?,?,?,?)",
                         &[&sense.lemma, &form.to_lowercase(), &sense.language, &key_str])?;
             }
-            tx.execute("INSERT INTO sense_keys (sense_key, synset)
-                          VALUES (?1, ?2)",
-                         &[&sense.sense_key, &key_str])?;
+            match sense.sense_key {
+                Some(ref sense_key) => {
+                    tx.execute("INSERT INTO sense_keys (sense_key, synset)
+                                  VALUES (?1, ?2)",
+                                 &[sense_key, &key_str])?;
+                },
+                None => {}
+            }
         }
         Ok(())
     }
@@ -270,7 +275,12 @@ impl WordNetBuilder {
         self.synsets.insert(key.clone(), synset.clone());
         self.by_ili.insert(synset.ili.clone(), key.clone());
         for sense in synset.lemmas {
-            self.by_sense_key.insert(sense.sense_key.clone(), key.clone());
+            match sense.sense_key {
+                Some(ref sense_key) => {
+                    self.by_sense_key.insert(sense_key.clone(), key.clone());
+                },
+                None => {}
+            }
         }
     }
 
@@ -381,11 +391,11 @@ impl WordNet {
                              &[&key.to_string()],
                              |s| { serde_json::from_str(&s) })
     }
-    pub fn get_by_lemma(&self, lemma : &str) -> Result<Vec<Synset>,WordNetLoadError> { 
+    pub fn get_by_lemma(&self, lemma : &str, lang : &str) -> Result<Vec<Synset>,WordNetLoadError> { 
         sqlite_query_vec("SELECT DISTINCT json FROM synsets
                           JOIN lemmas ON lemmas.synset=synsets.key
-                          WHERE lemma=?",
-                          &[&lemma.to_owned()],
+                          WHERE lemma=? AND language=?",
+                          &[&lemma.to_owned(), &lang.to_owned()],
                           |s| { serde_json::from_str(&s) })
     }
 //    pub fn get_id_by_ili(&self, ili : &str) -> Result<Option<WNKey>,WordNetLoadError> {

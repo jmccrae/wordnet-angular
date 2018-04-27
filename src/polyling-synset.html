@@ -1,0 +1,215 @@
+<div class="synset">
+    <div class="synset-id">
+        <b class="synset-id-title" ng-bind="$ctrl.synset.ili"></b>
+        <span class="pos">({{$ctrl.synset.pos}})</span>
+        <hr/>
+    </div>
+        
+    <div class="lemmas">
+        <div>
+        English: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
+            <span ng-if="sense.language=='en'">
+                <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-if="!$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
+            </span>
+        </span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'bg'}).length > 0 && $ctrl.display.lang_bg">
+        Bulgarian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'bg'}"><a target="_self" ng-href="/lemma-bg/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'hr'}).length > 0 && $ctrl.display.lang_hr ">
+        Croatian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'hr'}"><a target="_self" ng-href="/lemma-hr/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'cs'}).length > 0 && $ctrl.display.lang_cs ">
+        Czech: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'cs'}"><a target="_self" ng-href="/lemma-cs/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'da'}).length > 0 && $ctrl.display.lang_da ">
+        Danish: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'da'}"><a target="_self" ng-href="/lemma-da/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'nl'}).length > 0 && $ctrl.display.lang_nl ">
+        Dutch: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'nl'}"><a target="_self" ng-href="/lemma-nl/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'de'}).length > 0 && $ctrl.display.lang_de ">
+        German: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'de'}"><a target="_self" ng-href="/lemma-de/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'el'}).length > 0 && $ctrl.display.lang_el ">
+        Greek: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'el'}"><a target="_self" ng-href="/lemma-el/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'et'}).length > 0 && $ctrl.display.lang_et ">
+        Estonian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'et'}"><a target="_self" ng-href="/lemma-et/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'fi'}).length > 0  && $ctrl.display.lang_fi">
+        Finnish: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'fi'}"><a target="_self" ng-href="/lemma-fi/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'fr'}).length > 0  && $ctrl.display.lang_fr">
+        French: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'fr'}"><a target="_self" ng-href="/lemma-fr/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'hu'}).length > 0  && $ctrl.display.lang_hu">
+        Hungarian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'hu'}"><a target="_self" ng-href="/lemma-hu/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'ga'}).length > 0  && $ctrl.display.lang_ga">
+        Irish: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'ga'}"><a target="_self" ng-href="/lemma-ga/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'it'}).length > 0  && $ctrl.display.lang_it">
+        Italian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'it'}"><a target="_self" ng-href="/lemma-it/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'lv'}).length > 0  && $ctrl.display.lang_lv">
+        Latvian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'lv'}"><a target="_self" ng-href="/lemma-lv/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'lt'}).length > 0  && $ctrl.display.lang_lt">
+        Lithuanian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'lt'}"><a target="_self" ng-href="/lemma-lt/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'mt'}).length > 0  && $ctrl.display.lang_mt">
+        Maltese: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'mt'}"><a target="_self" ng-href="/lemma-mt/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'pl'}).length > 0  && $ctrl.display.lang_pl">
+        Polish: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'pl'}"><a target="_self" ng-href="/lemma-pl/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'pt'}).length > 0  && $ctrl.display.lang_pt">
+        Portuguese: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'pt'}"><a target="_self" ng-href="/lemma-pt/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'ro'}).length > 0  && $ctrl.display.lang_ro">
+        Romanian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'ro'}"><a target="_self" ng-href="/lemma-ro/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'sk'}).length > 0  && $ctrl.display.lang_sk">
+        Slovakian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'sk'}"><a target="_self" ng-href="/lemma-sk/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'sl'}).length > 0  && $ctrl.display.lang_sl">
+        Slovenian: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'sl'}"><a target="_self" ng-href="/lemma-sl/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'es'}).length > 0  && $ctrl.display.lang_es">
+        Spanish: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'es'}"><a target="_self" ng-href="/lemma-es/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+        <div ng-if="($ctrl.synset.lemmas|filter: {language:'sv'}).length > 0 && $ctrl.display.lang_sv">
+        Swedish: <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas|filter: {language:'sv'}"><a target="_self" ng-href="/lemma-sv/{{sense.lemma}}">{{sense.lemma}}</a>{{$last ? '' : ','}}</span>
+        </div>
+
+        <div ng-if="$ctrl.synset.gloss === null" ng-bind="$ctrl.synset.definition" class="definition"></div>
+        <div ng-if="$ctrl.show_relations" class="relations">
+            <relation display="$ctrl.display"
+                targetSynsets="$ctrl.targetsynsets"
+                fullname="Hypernyms"
+                relation="hypernym"
+                relations="$ctrl.synset.relations"></relation>
+            <relation relation="hyponym" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Hyponyms"></relation>
+             <relation relation="antonym" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Antonyms"></relation>
+            <relation relation="attribute" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Attributes"></relation>
+            <relation relation="causes" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Causes"></relation>
+            <relation relation="derivation" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Derived Forms"></relation>
+            <relation relation="domain_category" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Domains (category)"></relation>
+            <relation relation="domain_member_category" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Members (category)"></relation>
+            <relation relation="domain_member_region" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Members (region)"></relation>
+            <relation relation="domain_region" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Domains (region)"></relation>
+            <relation relation="domain_topic" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Domains (topic)"></relation>
+            <relation relation="entails" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Entails"></relation>
+            <relation relation="exemplifies" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Exemplifies"></relation>
+            <relation relation="has_domain_region" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Members (region)"></relation>
+            <relation relation="has_domain_topic" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Members (topic)"></relation>
+            <relation relation="holo_member" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Holonyms (member)"></relation>
+            <relation relation="holo_part" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Holonyms (part)"></relation>
+            <relation relation="holo_substance" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Holonyms (substance)"></relation>
+            <relation relation="also" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="See Also"></relation>
+           <relation relation="instance_hypernym" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Is Instance of"></relation>
+            <relation relation="instance_hyponym" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Instances"></relation>
+            <relation relation="is_exemplified_by" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Is Exemplified By"></relation>
+            <relation relation="mero_member" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Meronyms (member)"></relation>
+            <relation relation="mero_part" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Meronyms (part)"></relation>
+            <relation relation="mero_substance" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Meronyms (substance)"></relation>
+            <relation relation="participle" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Participles"></relation>
+            <relation relation="pertainym" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Pertainyms"></relation>
+            <relation relation="similar" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Similar to"></relation>
+            <relation relation="verb_group" display="$ctrl.display"
+                targetsynsets="$ctrl.targetsynsets"
+                relations="$ctrl.synset.relations"
+                fullname="Verb groups"></relation>
+            <a class="btn" href="#" ng-show="$ctrl.targetsynsetsextra.length > 0"
+               ng-click="$ctrl.extendtargetsynsets()">Load More</a>
+        </div>
+
+        <div class="more">
+            <a href="#"
+                ng-show="!$ctrl.show_relations"
+                ng-click="$ctrl.show_relations = !$ctrl.show_relations">MORE &#x25B6;</a>
+        </div>
+    </div>
+</div>

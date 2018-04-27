@@ -14,6 +14,7 @@ mod wordnet;
 mod wordnet_model;
 mod omwn;
 mod links;
+mod glosstag;
 
 use wordnet::{WNKey,WordNet};
 use wordnet_model::Synset;
@@ -39,7 +40,7 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
             .map_err(|e| format!("Database error: {}", e))?
             .ok_or(format!("Synset Not Found"))?.clone()]
     } else if index == "lemma" {
-        wordnet.get_by_lemma(id)
+        wordnet.get_by_lemma(id, "en")
             .map_err(|e| format!("Database error: {}", e))?
             .iter().map(|x| (*x).clone()).collect()
     } else if index == "ili" {

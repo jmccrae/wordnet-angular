@@ -1,0 +1,141 @@
+<div class="row">
+    <div ng-controller="SearchController as ctrl" layout="column" ng-cloak="">
+        <table width="100%">
+            <tr>
+                <td width="100px;">
+        <md-menu>
+        <button class="md-button" ng-click="$mdMenu.open()">{{ctrl.index}}</button>
+            <md-menu-content>
+
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-en'">English</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-bg'">Bulgarian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-hr'">Croatian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-cs'">Czech</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-da'">Danish</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-nl'">Dutch</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-de'">German</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-el'">Greek</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-et'">Estonian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-fi'">Finnish</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-fr'">French</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-hu'">Hungarian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-ga'">Irish</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-it'">Italian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-lv'">Latvian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-lt'">Lithuanian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-mt'">Maltese</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-pl'">Polish</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-pt'">Portuguese</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-ro'">Romanian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-sk'">Slovakian</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-sl'">Slovene</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-es'">Spanish</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index='lemma-sv'">Swedish</md-button></md-menu-item>
+                <md-menu-item><md-button ng-click="ctrl.index = 'ili'">Interlingual Identifier</md-button></md-menu-item>
+            </md-menu-content>
+        </md-menu>
+                </td>
+                <td>
+        <md-content class="md-padding">
+            <md-autocomplete
+                md-dropdown-items="10"
+                md-selected-item="ctrl.selectedItem" 
+                md-selected-item-change="ctrl.selectedItemChange(item)"
+                md-search-text="ctrl.searchText" 
+                md-items="item in ctrl.querySearch(ctrl.searchText)" 
+                md-item-text="item.display" 
+                md-min-length="2" 
+                md-no-cache="true"
+                placeholder="Search">
+                <md-item-template>
+                    <span md-highlight-text="ctrl.searchText" md-highlight-flags="^i">{{item.display}}</span>
+                </md-item-template>
+                <md-not-found>
+                    Not in dictionary
+                </md-not-found>
+            </md-autocomplete>
+        </md-content>
+            </td>
+        </tr>
+    </table>
+    </div>
+    <div>
+        <md-button slide-toggle="#langs" class="pull-right option_button" ng-click="display.langs = !display.langs"
+                                      ng-class="{option_button_selected: display.langs}">Languages   &#x25bc;</md-button>
+    </div>
+    <div id="langs" class="slideable option_panel">
+       <div class="option_panel_internal">
+           <table>
+               <tr>
+                   <td><md-checkbox ng-model="display.lang_bg"><img src="/flag/bul"/> Bulgarian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_hr"><img src="/flag/hrv"/> Croatian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_cs"><img src="/flag/cze"/> Czech</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_da"><img src="/flag/dnk"/> Danish</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_nl"><img src="/flag/nld"/> Dutch</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_en"><img src="/flag/eng"/> English</md-checkbox></td>
+               </tr><tr>
+                   <td><md-checkbox ng-model="display.lang_et"><img src="/flag/est"/> Estonian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_fi"><img src="/flag/fin"/> Finnish</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_fr"><img src="/flag/fra"/> French</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_de"><img src="/flag/deu"/> German</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_el"><img src="/flag/ell"/> Greek</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_hu"><img src="/flag/hun"/> Hungarian</md-checkbox></td>
+               </tr><tr>
+                   <td><md-checkbox ng-model="display.lang_ga"><img src="/flag/irl"/> Irish</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_it"><img src="/flag/ita"/> Italian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_lv"><img src="/flag/lva"/> Latvian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_lt"><img src="/flag/lit"/> Lithuanian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_mt"><img src="/flag/mlt"/> Maltese</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_pl"><img src="/flag/pol"/> Polish</md-checkbox></td>
+               </tr><tr>
+                   <td><md-checkbox ng-model="display.lang_pt"><img src="/flag/por"/> Portuguese</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_ro"><img src="/flag/ron"/> Romanian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_sk"><img src="/flag/slk"/> Slovakian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_sl"><img src="/flag/slv"/> Slovenian</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_es"><img src="/flag/spa"/> Spanish</md-checkbox></td>
+                   <td><md-checkbox ng-model="display.lang_sv"><img src="/flag/swe"/> Swedish</md-checkbox></td>
+               </tr>
+               <tr>
+                   <td></td>
+                   <td></td>
+                   <td></td>
+                   <td></td>
+                   <td></td>
+                   <td>
+                       <button class="md-button" ng-click="selectAllPolyWN()">Select All</button>
+                   </td>
+               </tr>
+           </table>
+       </div>
+    </div>
+    <span class="pos_grp">
+    <h3 class="pos_label">Nouns</h3>
+    <div ng-repeat="synset in synsets | filter:{'pos':'n'}">
+        <synset synset="synset" display="display" focus="focus"></synset>
+    </div>
+    </span>
+    <span class="pos_grp">
+    <h3 class="pos_label">Verbs</h3>
+    <div ng-repeat="synset in synsets | filter:{'pos':'v'}">
+        <synset synset="synset" display="display" focus="focus"></synset>
+    </div>
+    </span>
+    <span class="pos_grp">
+    <h3 class="pos_label">Adverbs</h3>
+    <div ng-repeat="synset in synsets | filter:{'pos':'r'}">
+        <synset synset="synset" display="display" focus="focus"></synset>
+    </div>
+    </span>
+    <span class="pos_grp">
+    <h3 class="pos_label">Adjectives</h3>
+    <div ng-repeat="synset in synsets | isAdjective">
+        <synset synset="synset" display="display" focus="focus"></synset>
+    </div>
+    </span>
+    <div class="pull-right" ng-show="link">
+        <b>Download As:</b>&nbsp;&nbsp;<a target="_self" ng-href="/json/{{link}}">JSON</a>&nbsp;&nbsp;
+            <a target="_self" ng-href="/ttl/{{link}}">RDF</a>&nbsp;&nbsp;
+            <a target="_self" ng-href="/xml/{{link}}">XML</a>
+    </div>
+</div>
+

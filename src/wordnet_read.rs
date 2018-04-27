@@ -10,20 +10,72 @@ use wordnet::{WordNetLoadError,WordNetBuilder,WNKey, WordNet};
 use wordnet_model::{Sense,Synset,Relation,PartOfSpeech};
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
+use glosstag::build_glosstags;
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
     attr.iter().find(|a| a.name.local_name == name).map(|a| a.value.clone())
 }
 
 fn clean_id(s : &str) -> Result<WNKey, WordNetLoadError> {
-    let s2 : String = s.chars().skip(5).collect();
-    //WNKey::from_str(&s2)
-    Ok(s2)
+    if s.starts_with("wn31-") {
+        let s2 : String = s.chars().skip(5).collect();
+        //WNKey::from_str(&s2)
+        Ok(s2)
+    } else {
+        Ok(s.to_string())
+    }
+}
+
+pub struct LoadConfiguration {
+    tabs : bool,
+    glosstags : bool,
+    omwn : bool,
+    links : bool
 }
 
 /// Load a Princeton WordNet-style GWN XML file and associated elements into
 /// the database
 pub fn load_pwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> {
+    load(path, &LoadConfiguration {
+        tabs: true,
+        glosstags: false,
+        omwn: true,
+        links : true
+    })
+}
+
+/// Load a Global WordNet XML file without any of the other associated elements
+pub fn load_gwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> {
+    load(path, &LoadConfiguration {
+        tabs: false,
+        glosstags: false,
+        omwn: false,
+        links : false
+    })
+}
+
+
+fn load<P : AsRef<Path>>(path : P, 
+                                 config : &LoadConfiguration) -> Result<WordNet, WordNetLoadError> {
+    let mut wordnet = WordNetBuilder::new()?;
+    load_xml(path, &mut wordnet)?;
+    if config.tabs {
+        build_tabs(&mut wordnet)?;
+    }
+    if config.glosstags {
+        build_glosstags(&mut wordnet)?;
+    }
+    if config.omwn {
+        build_omwn(&mut wordnet)?;
+    }
+    if config.links {
+        load_links(&mut wordnet)?;
+    }
+    wordnet.finalize()
+}
+
+fn load_xml<P : AsRef<Path>>(path : P, 
+                                 wordnet : &mut WordNetBuilder) -> Result<(), WordNetLoadError> {
     let file = BufReader::new(File::open(path)?);
 
     let parse = EventReader::new(file);
@@ -44,11 +96,26 @@ pub fn load_pwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> 
     let mut definition = None;
     let mut synsets = HashMap::new();
     let mut relations : HashMap<WNKey,Vec<Relation>> = HashMap::new();
+    let mut language = "en".to_string();
+    let mut entries_read = 0;
 
     for e in parse {
         match e {
             Ok(XmlEvent::StartElement{ name, attributes, .. }) => {
-                if name.local_name == "LexicalEntry" {
+                if name.local_name == "Lexicon" {
+                    match attr_value(&attributes, "language") {
+                        Some(l) => {
+                            language = l;
+                        },
+                        None =>
+                            return Err(WordNetLoadError::Schema(
+                                    "Lexicon does not have a language"))
+                    }
+                } else if name.local_name == "LexicalEntry" {
+                    entries_read += 1;
+                    if entries_read % 100000 == 0 {
+                        eprintln!("Read {}", entries_read);
+                    }
                     match attr_value(&attributes, "id") {
                         Some(id) => {
                             lexical_entry_id = Some(id)
@@ -106,7 +173,7 @@ pub fn load_pwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> 
                      synset = Some(target.clone());
                      synset_to_entry.entry(target.clone())
                         .or_insert_with(|| Vec::new())
-                        .push(entry_id);
+                        .push((entry_id, language.clone()));
                      let sense_id = attr_value(&attributes, "id")
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "Sense without id"))?;
@@ -147,6 +214,10 @@ pub fn load_pwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> 
                         .or_insert_with(|| Vec::new())
                         .push(subcat);
                 } else if name.local_name == "Synset" {
+                    entries_read += 1;
+                    if entries_read % 100000 == 0 {
+                        eprintln!("Read {}", entries_read);
+                    }
                     synset_id = Some(clean_id(&attr_value(&attributes, "id")
                         .ok_or_else(|| WordNetLoadError::Schema(
                                 "Synset does not have an id"))?)?);
@@ -193,21 +264,23 @@ pub fn load_pwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> 
                         WordNetLoadError::Schema(
                             "Synset without definition"))?;
                     let ssid = synset_id.unwrap();
+                    //let entries = Vec::new();
                     let entries = synset_to_entry.get(&ssid)
                         .map(|x| x.clone())
                         .unwrap_or_else(|| Vec::new())
                         .iter()
                         .map(|x| {
                             Sense {
-                                lemma: entry_id_to_lemma.get(x)
+                                lemma: entry_id_to_lemma.get(&x.0)
                                     .expect("Entry must have lemma")
                                     .clone(),
-                                language: "en".to_string(),
-                                forms: entry_id_to_forms.get(x)
+                                language: x.1.clone(),
+                                forms: entry_id_to_forms.get(&x.0)
                                     .map(|x| x.clone())
                                     .unwrap_or_else(|| Vec::new()),
-                                sense_key: sense_keys[x][&ssid].clone(),
-                                subcats: subcats.get(x)
+                                sense_key: sense_keys.get(&x.0).and_then(
+                                    |x| x.get(&ssid).map(|y| y.clone())),
+                                subcats: subcats.get(&x.0)
                                     .map(|x| x.clone())
                                     .unwrap_or_else(|| Vec::new())
                                     .clone()
@@ -263,24 +336,7 @@ pub fn load_pwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> 
             Err(e) => { return Err(WordNetLoadError::Xml(e)); }
         }
     }
-    let mut wordnet = WordNetBuilder::new()?;
-    wordnet.set_synsets(synsets)?;
-    build_tabs(&mut wordnet)?;
-    //build_glosstags(&mut wordnet)?;
-    build_omwn(&mut wordnet)?;
-    load_links(&mut wordnet)?;
-    //eprintln!("size_of synsets: {}", wordnet.synsets.len());
-    //eprintln!("size_of by_lemma: {}", wordnet. by_lemma.len());
-    //eprintln!("size_of by_ili: {}", wordnet.by_ili.len());
-    //eprintln!("size_of by_sense_key: {}", wordnet.by_sense_key.len());
-    //eprintln!("size_of by_old_id: {}", wordnet.by_old_id.len());
-    //eprintln!("size_of id_skiplist: {}", wordnet.id_skiplist.len());
-    //eprintln!("size_of lemma_skiplist: {}", wordnet.lemma_skiplist.len());
-    //eprintln!("size_of ili_skiplist: {}", wordnet.ili_skiplist.len());
-    //eprintln!("size_of sense_key_skiplist: {}", wordnet.sense_key_skiplist.len());
-    //eprintln!("size_of old_skiplist: {}", wordnet.old_skiplist.len());
-
-    wordnet.finalize()
+    wordnet.set_synsets(synsets)
 }
 
 fn build_tab<P : AsRef<Path>>(file : P, 
