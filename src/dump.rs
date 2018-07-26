@@ -145,7 +145,7 @@ fn main() {
 @prefix wn: <http://wordnet-rdf.princeton.edu/ontology#> .
 @prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
 @prefix pwnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
-@prefix pwnid: <http://wordnet-rdf.princeton.edu/rdf/id/> .
+@prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .");
 
     for synset_id in wordnet.get_synset_ids().expect("Could not read database") {

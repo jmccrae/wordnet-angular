@@ -4,7 +4,7 @@
   ontolex:canonicalForm [
     ontolex:writtenRep "{{this.0.lemmas.0.lemma}}"@en
   ] ;
-{{#each this}} ontolex:sense <#{{lemma_escape lemmas.0.lemma}}-{{id}}> ; {{/each}}
+{{#each this}} ontolex:sense <http://wordnet-rdf.princeton.edu/rdf/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}> ; {{/each}}
 {{#each this.0.lemmas.0.subcats}} synsem:synBehavior [ rdfs:label "{{this}}"@en ] ; {{/each}} wn:partOfSpeech wn:{{long_pos this.0.pos}} ;
   a ontolex:LexicalEntry .  
 {{/each}}

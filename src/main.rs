@@ -75,6 +75,8 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
     }
 }
 
+fn html_utf8() -> ContentType { ContentType::with_params("text", "html", ("charset", "UTF-8")) }
+
 #[get("/ttl/<index>/<name>")]
 fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String) 
         -> Result<Response<'r>, String> {
@@ -156,12 +158,14 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
     } else if name == "synset.html" {
         if state.site == WordNetSite::Princeton {
             Response::build()
+                .header(html_utf8())
                 .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
                 .sized_body(Cursor::new(include_str!("synset.html")))
                 //.sized_body(File::open("src/synset.html").unwrap())
                 .finalize()
         } else {
             Response::build()
+                .header(html_utf8())
                 .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
                 .sized_body(Cursor::new(include_str!("polyling-synset.html")))
                 //.sized_body(File::open("src/synset.html").unwrap())
@@ -170,12 +174,14 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
     } else if name == "wordnet.html" {
         if state.site == WordNetSite::Princeton {
             Response::build()
+                .header(html_utf8())
                 .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
                 .sized_body(Cursor::new(include_str!("wordnet.html")))
                 //.sized_body(File::open("src/wordnet.html").unwrap())
                 .finalize()
         } else {
             Response::build()
+                .header(html_utf8())
                 .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
                 .sized_body(Cursor::new(include_str!("polyling-wordnet.html")))
                 //.sized_body(File::open("src/wordnet.html").unwrap())
@@ -183,6 +189,7 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
         }
     } else if name == "relation.html" {
         Response::build()
+            .header(html_utf8())
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(Cursor::new(include_str!("relation.html")))
             //.sized_body(File::open("src/relation.html").unwrap())
@@ -391,7 +398,7 @@ enum ContentNegotiation { Html, RdfXml, Turtle, Json }
 impl<'a,'r> FromRequest<'a,'r> for ContentNegotiation {
     type Error = String;
     fn from_request(request: &'a Request<'r>) -> Outcome<ContentNegotiation, String> {
-        for value in request.headers().get("Accepts") {
+        for value in request.headers().get("Accept") {
             if value.starts_with("text/html") {
                 return Success(ContentNegotiation::Html);
             } else if value.starts_with("application/rdf+xml") {
@@ -595,6 +602,7 @@ fn wn31ntgz<'r>() -> Response<'r> {
 #[get("/")]
 fn index<'r>(state : State<WordNetState>) -> Response<'r> {
     Response::build()
+        .header(html_utf8())
         .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
         //.sized_body(File::open("src/index.html").unwrap())
         .sized_body(match state.site {
@@ -607,6 +615,7 @@ fn index<'r>(state : State<WordNetState>) -> Response<'r> {
 #[get("/about")]
 fn about<'r>() -> Response<'r> {
     Response::build()
+        .header(html_utf8())
         .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
         //.sized_body(File::open("src/about.html").unwrap())
         .sized_body(Cursor::new(include_str!("about.html")))
@@ -616,6 +625,7 @@ fn about<'r>() -> Response<'r> {
 #[get("/license")]
 fn license<'r>() -> Response<'r> {
     Response::build()
+        .header(html_utf8())
         .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
         //.sized_body(File::open("src/license.html").unwrap())
         .sized_body(Cursor::new(include_str!("license.html")))
@@ -636,6 +646,7 @@ fn ontology<'r>() -> Response<'r> {
 #[get("/ontology.html")]
 fn ontology_html<'r>() -> Response<'r> {
     Response::build()
+        .header(html_utf8())
         .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
         //.sized_body(File::open("src/ontology.html").unwrap())
         .sized_body(Cursor::new(include_str!("ontology.html")))
