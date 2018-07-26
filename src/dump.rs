@@ -19,7 +19,7 @@ mod glosstag;
 use wordnet::{WNKey,WordNet};
 use wordnet_model::Synset;
 use std::collections::HashMap;
-use clap::{App};
+use clap::{App,Arg};
 use handlebars::{Handlebars};
 use std::str::FromStr;
 
@@ -124,8 +124,13 @@ fn main() {
     let app = App::new("wordnet-rdf-dump")
         .version("1.0")
         .author("John P. McCrae <john@mccr.ae>")
-        .about("WordNet Angular RDF Dump Utility");
-    /*let matches =*/ app.clone().get_matches();
+        .about("WordNet Angular RDF Dump Utility")
+        .arg(Arg::with_name("pos")
+             .long("pos")
+             .value_name("POS")
+             .help("Only dump the particular part of speech")
+             .takes_value(true));
+    let matches = app.clone().get_matches();
     let wordnet = wordnet::WordNet::new();
     let mut handlebars = Handlebars::new();
     handlebars.register_template_string("ttl", include_str!("ttl-dump.hbs"))
@@ -147,11 +152,14 @@ fn main() {
 @prefix pwnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
 @prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .");
+    let filter = matches.value_of("pos").unwrap_or("");
 
     for synset_id in wordnet.get_synset_ids().expect("Could not read database") {
-        println!("{}", handlebars.render("ttl", 
-            &make_synsets_hb(get_synsets(&wordnet, "id", &synset_id.to_string()).
-                             expect("Could not get synsets"),"id",&synset_id.to_string()))
-                 .expect("Could not apply template"));
+        if synset_id.ends_with(filter) {
+            println!("{}", handlebars.render("ttl", 
+                &make_synsets_hb(get_synsets(&wordnet, "id", &synset_id.to_string()).
+                                 expect("Could not get synsets"),"id",&synset_id.to_string()))
+                     .expect("Could not apply template"));
+        }
     }
 }
