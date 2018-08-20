@@ -31,6 +31,7 @@ use rocket::Response;
 use rocket::Request;
 use rocket::request::{FromRequest,Outcome};
 use rocket::http::hyper::header::{Location,CacheDirective,CacheControl};
+use rocket::http::Header;
 use rocket::Outcome::Success;
 use rocket::http::{ContentType, Status};
 use std::io::Cursor;
@@ -284,6 +285,7 @@ fn synset<'r>(index : String, id : String,
         .map_err(|e| format!("Failed to serialize synset: {}", e))?;
     Ok(Response::build()
         .header(ContentType::JSON)
+        .header(Header::new("Access-Control-Allow-Origin","*"))
         .sized_body(Cursor::new(json))
         .finalize())
 }
