@@ -34,8 +34,10 @@ use rocket::http::hyper::header::{Location,CacheDirective,CacheControl};
 use rocket::http::Header;
 use rocket::Outcome::Success;
 use rocket::http::{ContentType, Status};
+use std::env;
 use std::io::Cursor;
 use std::fs::File;
+use std::path::Path;
 use handlebars::{Handlebars};
 use std::collections::HashMap;
 use rocket::config::{Environment, Config as RocketConfig};
@@ -712,8 +714,35 @@ fn long_pos(h : &handlebars::Helper,
     Ok(())
 }
 
+fn check_path(path : &str) -> bool {
+    let p = Path::new(path);
+    if p.exists() {
+        true
+    } else {
+        match env::current_dir() {
+            Ok(home) => {
+                eprintln!("Could not find required file at {} (home is {})", 
+                          p.display(), home.display());
+            },
+            Err(_) => {
+                eprintln!("Could not find required file at {} or deduce home",
+                          p.display());
+            }
+        }
+        false
+    }
+}
+
 
 fn prepare_server(config : Config) -> Result<WordNetState, String> {
+    let mut resources = true;
+    resources = check_path("wordnet.db") && resources;
+    resources = check_path("wordnet.nt.gz") && resources;
+    resources = check_path("src") && resources;
+    resources = check_path("flags") && resources;
+    if !resources {
+        exit(-1);
+    }
     let mut handlebars = Handlebars::new();
     handlebars.register_template_string("xml", include_str!("xml.hbs"))
         .expect("Could not load xml.hbs");
