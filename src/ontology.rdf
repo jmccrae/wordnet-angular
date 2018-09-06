@@ -93,7 +93,7 @@
        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
        <rdfs:label xml:lang="en">Hyponym</rdfs:label>
        <rdfs:subPropertyOf rdf:resource="http://wordnet-rdf.princeton.edu/ontology#link"/>
-       <owl:sameAs rdf:resource="http://www.w3.org/2004/02/skos/core#narrower"/>
+       <owl:equivalentProperty rdf:resource="http://www.w3.org/2004/02/skos/core#narrower"/>
    </rdf:Description>
    <rdf:Description rdf:about="http://wordnet-rdf.princeton.edu/ontology#domain_member_usage">
        <rdfs:subPropertyOf rdf:resource="http://wordnet-rdf.princeton.edu/ontology#link"/>
@@ -414,7 +414,7 @@
        <isocat:datcat rdf:resource="http://www.isocat.org/datcat/DC-31"/>
        <rdfs:subPropertyOf rdf:resource="http://wordnet-rdf.princeton.edu/ontology#link"/>
        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
-       <owl:sameAs rdf:resource="http://www.w3.org/2004/02/skos/core#broader"/>
+       <owl:equivalentProperty rdf:resource="http://www.w3.org/2004/02/skos/core#broader"/>
    </rdf:Description>
    <rdf:Description rdf:about="http://wordnet-rdf.princeton.edu/ontology#verb.perception">
        <rdf:type rdf:resource="http://wordnet-rdf.princeton.edu/ontology#LexicalDomain"/>
