@@ -245,3 +245,18 @@ angular.module('app')
         }
     }
 });
+
+angular.module('app').run(function($rootScope, $location){
+   //Bind the `$locationChangeSuccess` event on the rootScope, so that we dont need to 
+   //bind in induvidual controllers.
+
+   $rootScope.$on('$locationChangeSuccess', function() {
+        $rootScope.actualLocation = $location.path();
+    });        
+
+   $rootScope.$watch(function () {return $location.path()}, function (newLocation, oldLocation) {
+        if($rootScope.actualLocation === newLocation) {
+            location.reload();
+        }
+    });
+});
