@@ -1,8 +1,17 @@
 body {
     font-family: 'Dosis', sans-serif;
-    border-top: 4px solid #671d5b;
+    border-top: 4px solid #f37221;
   margin-bottom: 60px;
 }
+
+a {
+    color: #d21baa;
+}
+
+a:focus, a:hover {
+    color: #871AA3;
+}
+
 .footer {
   height: 100px;
   padding: 20px;
@@ -17,7 +26,7 @@ wordnet .row {
 h1 {
     font-family: 'Arvo', serif;
     font-weight: 700;
-    color: #184165;
+    color: #e92a60;
 }
 
 .poly-title {
@@ -96,7 +105,7 @@ h3 {
 }
 
 .pos {
-    color: firebrick;
+    color: #f54d20;
 }
 
 .underline {
@@ -108,7 +117,7 @@ h3 {
     margin-bottom:2px;
 }
 
-.relation-title a {
+.relation-title a,.relation-title a:hover,.relation-title a:focus {
     text-decoration:none;
     color:black;
     font-size: 0.8em;
@@ -152,7 +161,7 @@ div.option_panel_internal {
 }
 
 .option_panel md-checkbox.md-checked .md-icon {
-    background-color: #671d5b !important;
+    background-color: #f37221 !important;
 }
 
 .option_button {
@@ -211,3 +220,4 @@ div.option_panel_internal {
     font-weight: bold;
     font-size: 1.1em;
 }
+

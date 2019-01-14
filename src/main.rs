@@ -1,7 +1,6 @@
-#![feature(plugin)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 extern crate stable_skiplist;
 extern crate xml;
 #[macro_use]
@@ -233,11 +232,11 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(Cursor::new(include_str!("polylingwn.css")))
             .finalize()
-    } else if name == "polylingwn.png" && state.site == WordNetSite::Polylingual {
+    } else if name == "polylingwn.svg" && state.site == WordNetSite::Polylingual {
         Response::build()
-            .header(ContentType::PNG)
+            .header(ContentType::SVG)
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(File::open("src/polylingwn.png").unwrap())
+            .sized_body(File::open("src/polylingwn.svg").unwrap())
             .finalize()
     } else {
         Response::build()
@@ -859,10 +858,11 @@ fn main() {
                 Ok(state) => {
                     eprintln!("Starting at port {}", config.port);
                     rocket::custom(
-                        RocketConfig::build(Environment::Staging)
+                        RocketConfig::build(Environment::Production)
                                 .port(config.port)
+                                .workers(30)
                                 .finalize()
-                                .expect("Could not configure Rocket"), false)
+                                .expect("Could not configure Rocket"))//, false)
                         .manage(state)
                         .mount("/", routes![
                                 about, ontology, ontology_html, license,
