@@ -14,6 +14,8 @@ The system is compiled and built with Cargo it can be built as usual with
 
 The server is a single executable at `target/release/wordnet-angular`
 
+Note: this project is dependent on [Rocket](http://rocket.rs) and needs the **nightly** build of Rust, see https://rocket.rs/v0.4/guide/quickstart/ for more details
+
 ## Usage
 
     USAGE:
