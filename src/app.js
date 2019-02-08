@@ -53,8 +53,8 @@ angular.module('app').controller('SearchController',
         }
         self.selectedItemChange(self.selectedItem);
     }
-    self.querySearch = function (query, $timeout) {
-        if(query === "") {
+    self.querySearch = function ($timeout) {
+        if(self.query === "") {
             self.results = [];
         } else {
             var searched = self.query;
@@ -70,6 +70,13 @@ angular.module('app').controller('SearchController',
             }, function(response) {
                 console.log(response.data);
             });
+        }
+    };
+    self.keyPress = function(keyCode) {
+        if(keyCode == 13) {
+            if(self.results.length > 0 && self.results[0].item === self.query) {
+                self.selectedItemChange(self.results[0]);
+            }
         }
     }
 });
