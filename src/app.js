@@ -22,11 +22,14 @@ angular.module('app').controller('SearchController',
         function($scope, $http, $location) {
     var self = this;
     self.index = 'lemma';
+    self.results = [];
+    self.query = '';
     var m = $location.path().match("/(.*)/(.*)");
     self.selectedItemChange = function(item) {
         if(item) {
             $location.path("/"+ self.index + "/"+item.item);
             $scope.$parent.focus = item.item;
+            self.results = [];
             $http.get("/json/"+ self.index + "/"+item.item).then(
                 function(result) {
                     $scope.$parent.synsets = result.data;
@@ -51,17 +54,24 @@ angular.module('app').controller('SearchController',
         self.selectedItemChange(self.selectedItem);
     }
     self.querySearch = function (query, $timeout) {
-       return $http.get("/autocomplete/"+ self.index + "/"+ query).then(
+        if(query === "") {
+            self.results = [];
+        } else {
+            var searched = self.query;
+       $http.get("/autocomplete/"+ self.index + "/"+ self.query).then(
             function(result) {
                 // See https://github.com/angular/material/issues/6668
-                var outerContainer = document.querySelector('.md-autocomplete-suggestions-container');
-                var innerContainer = document.querySelector('.md-virtual-repeat-sizer');
-                outerContainer.style.height = innerContainer.style.height;
-                return result.data;
+                //var outerContainer = document.querySelector('.md-autocomplete-suggestions-container');
+                //var innerContainer = document.querySelector('.md-virtual-repeat-sizer');
+                //outerContainer.style.height = innerContainer.style.height;
+                if(self.query === searched) {
+                    self.results = result.data;
+                }
             }, function(response) {
                 console.log(response.data);
             });
-        };
+        }
+    }
 });
 
 angular.module('app').component('synset', {

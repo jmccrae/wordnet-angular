@@ -1,49 +1,37 @@
 <div class="row">
-    <div ng-controller="SearchController as ctrl" layout="column" ng-cloak="">
-        <table width="100%">
-            <tr>
-                <td width="100px;">
-        <md-menu>
-        <button class="md-button" ng-click="$mdMenu.open()" class="md-icon-button">{{ctrl.index}}</button>
+  <div ng-controller="SearchController as ctrl" layout="column" ng-cloak="">
+    <table width="100%">
+      <tr>
+        <td width="100px;" style="vertical-align:top;">
+          <md-menu>
+            <button class="md-button" ng-click="$mdMenu.open()" class="md-icon-button">{{ctrl.index}}</button>
             <md-menu-content>
-                <md-menu-item><md-button ng-click="ctrl.index = 'lemma'">Lemma</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'id'">Identifier</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'ili'">Interlingual Identifier</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'sense_key'">Sense Key</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'pwn30'">WordNet 3.0</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'pwn21'">WordNet 2.1</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'pwn20'">WordNet 2.0</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'pwn171'">WordNet 1.7.1</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'pwn17'">WordNet 1.7</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'pwn16'">WordNet 1.6</md-button></md-menu-item>
-                <md-menu-item><md-button ng-click="ctrl.index = 'pwn15'">WordNet 1.5</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'lemma'">Lemma</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'id'">Identifier</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'ili'">Interlingual Identifier</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'sense_key'">Sense Key</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'pwn30'">WordNet 3.0</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'pwn21'">WordNet 2.1</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'pwn20'">WordNet 2.0</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'pwn171'">WordNet 1.7.1</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'pwn17'">WordNet 1.7</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'pwn16'">WordNet 1.6</md-button></md-menu-item>
+              <md-menu-item><md-button ng-click="ctrl.index = 'pwn15'">WordNet 1.5</md-button></md-menu-item>
             </md-menu-content>
-        </md-menu>
-                </td>
-                <td>
-        <md-content class="md-padding">
-            <md-autocomplete
-                md-dropdown-items="10"
-                md-selected-item="ctrl.selectedItem" 
-                md-selected-item-change="ctrl.selectedItemChange(item)"
-                md-search-text="ctrl.searchText" 
-                md-items="item in ctrl.querySearch(ctrl.searchText)" 
-                md-item-text="item.display" 
-                md-min-length="2" 
-                md-no-cache="true"
-                placeholder="Search">
-                <md-item-template>
-                    <span md-highlight-text="ctrl.searchText" md-highlight-flags="^i">{{item.display}}</span>
-                </md-item-template>
-                <md-not-found>
-                    Not in dictionary
-                </md-not-found>
-            </md-autocomplete>
-        </md-content>
-            </td>
-        </tr>
+          </md-menu>
+        </td>
+        <td>
+          <input type="text" class="search-control" placeholder="Search"
+                 ng-model="ctrl.query" ng-change="ctrl.querySearch()">
+          <ul class="list-group search-group" ng-if="ctrl.results && ctrl.results.length > 0">
+              <li ng-repeat="result in ctrl.results" class="list-group-item" ng-click="ctrl.selectedItemChange(result)">
+                <a ng-bind="result.display"></a>
+            </li>
+          </ul>
+        </td>
+      </tr>
     </table>
-    </div>
+  </div>
     <div>
         <md-button slide-toggle="#display" class="pull-right option_button" ng-click="display.display = !display.display"
                                       ng-class="{option_button_selected: display.display}">Options  &#x25bc;</md-button>

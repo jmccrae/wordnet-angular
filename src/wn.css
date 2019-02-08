@@ -196,3 +196,34 @@ div.option_panel_internal {
     border-bottom: 1px dotted #999;
 }
 .md-virtual-repeat-container .md-autocomplete-suggestions-container { position: fixed; bottom: 50px !important; height: initial !important; max-height: 99999999px !important; }
+
+.search-control {
+    font-size: 14px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    box-shadow: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    padding: 0 15px;
+    line-height: 40px;
+    height: 40px;
+    width: 100%;
+    padding: 6px 12px;
+    color: #555;
+}
+
+.search-group li {
+    border-top-left-radius: 0px !important;
+    border-top-right-radius: 0px !important;
+    border-bottom-left-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;
+}
+
+.search-group li:hover {
+    background: #eee;
+}
+
+.search-group li a {
+    color: #333;
+}
