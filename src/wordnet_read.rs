@@ -54,6 +54,16 @@ pub fn load_gwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> 
     })
 }
 
+/// Load the English WordNet
+pub fn load_enwn<P : AsRef<Path>>(path : P) -> Result<WordNet, WordNetLoadError> {
+    load(path, &LoadConfiguration {
+        tabs: false,
+        glosstags: false,
+        omwn: false,
+        links: false
+    })
+}
+
 
 fn load<P : AsRef<Path>>(path : P, 
                                  config : &LoadConfiguration) -> Result<WordNet, WordNetLoadError> {

@@ -9,3 +9,10 @@ wordnet.db
 wordnet.nt
 wordnet.ttl
 wordnet.nt.gz
+*.db
+*.nt
+*.nt.gz
+.idea
+*.db2
+tmp*
+polylingwn.xml

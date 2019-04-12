@@ -132,7 +132,7 @@ fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
 #[get("/static/<name>")]
 fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
     if name == "app.js" {
-        if state.site == WordNetSite::Princeton {
+        if state.site == WordNetSite::Princeton || state.site == WordNetSite::English {
             Response::build()
                 .header(ContentType::JavaScript)
                 .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
@@ -154,11 +154,12 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             //.sized_body(Cursor::new(include_str!("favicon.ico")))
             .sized_body(match state.site {
                 WordNetSite::Princeton => File::open("src/favicon.ico").unwrap(),
-                WordNetSite::Polylingual => File::open("src/polyling-favicon.ico").unwrap()
+                WordNetSite::Polylingual => File::open("src/polyling-favicon.ico").unwrap(),
+                WordNetSite::English => File::open("src/english-favicon.ico").unwrap()
             })
             .finalize()
     } else if name == "synset.html" {
-        if state.site == WordNetSite::Princeton {
+        if state.site == WordNetSite::Princeton || state.site == WordNetSite::English {
             Response::build()
                 .header(html_utf8())
                 .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
@@ -181,6 +182,14 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
                 .sized_body(Cursor::new(include_str!("wordnet.html")))
                 //.sized_body(File::open("src/wordnet.html").unwrap())
                 .finalize()
+        } else if state.site == WordNetSite::English {
+            Response::build()
+                .header(html_utf8())
+                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+                .sized_body(Cursor::new(include_str!("english-wordnet.html")))
+                //.sized_body(File::open("src/wordnet.html").unwrap())
+                .finalize()
+
         } else {
             Response::build()
                 .header(html_utf8())
@@ -237,6 +246,18 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             .header(ContentType::SVG)
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/polylingwn.svg").unwrap())
+            .finalize()
+    } else if name == "english.css" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::CSS)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(Cursor::new(include_str!("english.css")))
+            .finalize()
+    } else if name == "english.svg" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::SVG)
+            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+            .sized_body(File::open("src/english.svg").unwrap())
             .finalize()
     } else {
         Response::build()
@@ -610,7 +631,8 @@ fn index<'r>(state : State<WordNetState>) -> Response<'r> {
         //.sized_body(File::open("src/index.html").unwrap())
         .sized_body(match state.site {
             WordNetSite::Princeton => Cursor::new(include_str!("index.html")),
-            WordNetSite::Polylingual => Cursor::new(include_str!("polyling-index.html"))
+            WordNetSite::Polylingual => Cursor::new(include_str!("polyling-index.html")),
+            WordNetSite::English => Cursor::new(include_str!("english-index.html"))
         })
         .finalize()
 }
@@ -673,6 +695,7 @@ impl Config {
         let site = match matches.value_of("site").unwrap_or("princeton") {
             "princeton" => WordNetSite::Princeton,
             "polylingual" => WordNetSite::Polylingual,
+            "en" => WordNetSite::English,
             _ => return Err("Bad site")
         };
         Ok(Config {
@@ -735,7 +758,7 @@ fn check_path(path : &str) -> bool {
 
 fn prepare_server(config : Config) -> Result<WordNetState, String> {
     let mut resources = true;
-    resources = check_path("wordnet.db") && resources;
+    resources = config.reload || check_path("wordnet.db") && resources;
     resources = check_path("wordnet.nt.gz") && resources;
     resources = check_path("src") && resources;
     resources = check_path("flags") && resources;
@@ -755,6 +778,9 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
         eprintln!("Loading WordNet data");
         if config.site == WordNetSite::Princeton {
             wordnet_read::load_pwn(config.wn_file)
+                .map_err(|e| format!("Failed to load WordNet: {}", e))?
+        } else if config.site == WordNetSite::English {
+            wordnet_read::load_enwn(config.wn_file)
                 .map_err(|e| format!("Failed to load WordNet: {}", e))?
         } else {
             wordnet_read::load_gwn(config.wn_file)
@@ -824,7 +850,8 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
 #[derive(Clone,Debug,PartialEq)]
 enum WordNetSite {
     Princeton,
-    Polylingual
+    Polylingual,
+    English
 }
 
 fn main() {
@@ -843,7 +870,7 @@ fn main() {
              .takes_value(true))
         .arg(Arg::with_name("site")
              .short("s")
-             .value_name("princeton|polylingual")
+             .value_name("princeton|polylingual|en")
              .help("The site design to use")
              .takes_value(true))
         .arg(Arg::with_name("wn")

@@ -1,0 +1,292 @@
+body {
+    font-family: 'Dosis', sans-serif;
+    border-top: 4px solid #BF0A30;
+    margin-bottom: 60px;
+}
+
+a {
+    color: #002868;
+}
+
+a:focus, a:hover {
+    color: #bf0a30;
+}
+
+.footer {
+  height: 100px;
+  padding: 20px;
+  font-size: 12px;
+  text-align:right;
+  font-family: 'Arvo', serif;
+
+}
+wordnet .row {
+    min-height:700px;
+}
+h1 {
+    font-family: 'Arvo', serif;
+    font-weight: 700;
+    color: #002868;
+}
+
+.en-title {
+    line-height: 1.1em;
+    padding-left: 20px;
+    font-size: 42pt;
+}
+
+h3 {
+    font-family: 'Arvo', serif;
+    font-size: 30px;
+}
+
+.relation-title {
+    font-family: 'Arvo', serif;
+    font-size: 1.1em;
+}
+
+.synset {
+    padding-left:15px;
+    padding-bottom:10px;
+}
+
+.lemmas {
+    font-size: 14pt;
+}
+
+.definition {
+    font-size: 0.8em;
+    color: #777;
+    font-style: italic;
+}
+
+.sense_key:before {
+    content: '(';
+}
+
+.sense_key:after {
+    content: ')';
+}
+
+.sense_key {
+    color: #aaa;
+    font-family: 'Scope One', monospace;
+}
+
+.synset-id {
+    font-size: 16pt;
+}
+
+.identifier {
+    font-family: 'Scope One', monospace;
+}
+
+.more {
+    padding-top:5px;
+    padding-left:20px;
+    font-size: 16px;
+    text-decoration: none;
+}
+
+.more a {
+    color: black;
+}
+
+.more:hover {
+    text-decoration: underline;
+}
+
+.relations {
+    padding-left:30px;
+}
+
+.relation-word {
+    padding-left:30px;
+}
+
+.pos {
+    color: #BF0A30;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.synset-id hr {
+    margin-top:2px;
+    margin-bottom:2px;
+}
+
+.relation-title a,.relation-title a:hover,.relation-title a:focus {
+    text-decoration:none;
+    color:black;
+    font-size: 0.8em;
+}
+
+.relation-title a:hover {
+    text-decoration: underline;
+}
+
+.lemma a {
+    color:black;
+}
+
+.topic {
+    margin-left:25px;
+}
+
+.subcats {
+    margin-left:25px;
+}
+.pos_grp h3:only-child {
+    display:none;
+}
+
+.option_panel {
+    clear:both;
+    background-color:#444;
+    color: #eee;
+}
+
+.option_panel_internal table {
+    width: 100%;
+}
+
+div.option_panel_internal {
+    padding: 10px;
+}
+
+.option_panel .md-icon {
+    border-color: #ccc !important;
+}
+
+.option_panel md-checkbox.md-checked .md-icon {
+    background-color: #f37221 !important;
+}
+
+.option_button {
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+    margin-left:0px;
+    margin-right:0px;
+    border-radius:0px;
+}
+
+.option_button_selected {
+    background-color: #444;
+    color:#eee;
+}
+
+.option_button_selected:hover {
+    background-color: #444 !important;
+    color:#eee;
+}
+.gloss_word {
+    position: relative;
+    display: inline-block;
+}
+
+/* Tooltip text */
+.gloss_word .gloss_details {
+    visibility: hidden;
+    width: 200px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+ 
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.gloss_word:hover .gloss_details {
+    visibility: visible;
+}
+
+.gloss_word a {
+    text-decoration: none;
+    color: #777;
+}
+
+.definition:hover a {
+    border-bottom: 1px dotted #999;
+}
+
+.footer-title {
+    text-decoration: underline;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+.search-control {
+    font-size: 14px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    box-shadow: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    padding: 0 15px;
+    line-height: 40px;
+    height: 40px;
+    width: 100%;
+    padding: 6px 12px;
+    color: #555;
+}
+
+td .search-group-parent {
+    position: relative;
+}
+
+.search-group {
+    position: absolute;
+    z-index: 10;
+    width: 100%;
+}
+
+.search-group li {
+    border-top-left-radius: 0px !important;
+    border-top-right-radius: 0px !important;
+    border-bottom-left-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;
+}
+
+.search-group li:hover {
+    background: #eee;
+}
+
+.search-group li a {
+    color: #333;
+}
+
+#github-ribbon {
+    position:relative;
+}
+
+#github-ribbon a {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+}
+
+.download-btn {
+    padding: 12px 24px;
+    color: #eee;
+    background-color: #002868;
+  font-family: 'Arvo', serif;
+  font-size: 20px;
+  margin: 15px;
+}
+.download-btn a {
+    color: #eee;
+}
+
+.footer1 {
+    font-size: 120%;
+}
+
+.footer2 {
+    padding-bottom: 50px;
+}

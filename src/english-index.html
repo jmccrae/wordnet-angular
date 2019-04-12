@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta name="description" content="EN WordNet">
+  <meta name="author" content="John P. McCrae">
+    <base href="/">
+
+  <title>English WordNet</title>
+  
+  <link rel="icon" href="static/favicon.ico">
+
+
+  <link href="https://fonts.googleapis.com/css?family=Arvo:400,700|Dosis|Scope+One" rel="stylesheet">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel='stylesheet prefetch' href='https://cdn.gitcdn.link/cdn/angular/bower-material/v1.1.5/angular-material.css'>
+  <link rel="stylesheet" href="/static/english.css">
+</head>
+<body>
+    <div id="github-ribbon">
+<a href="https://github.com/globalwordnet/english-wordnet"><img width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_darkblue_121621.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
+    </div>
+    <div class="container" ng-app="app">
+        <div class="row" style="padding-top:5px;">
+            <table width="100%">
+                <tr>
+                    <td width="125px"><img src="/static/english.svg"/></td>
+                    <td width="200px"><h1 class="en-title">English WordNet</h1></td>
+                    <td></td>
+                </tr>
+            </table>
+        </div>
+        <wordnet></wordnet>
+    <footer class="footer">
+      <div class="container">
+          <div style="text-align:center;">
+            <button type="button" class="btn download-btn"><a href="http://server1.nlp.insight-centre.org/enwordnet-update/english-wordnet-3.2.xml">Download as XML</a></button>
+            <button type="button" class="btn download-btn"><a href="http://server1.nlp.insight-centre.org/enwordnet-update/english-wordnet-3.2.ttl">Download as RDF</a></button>
+            <button type="button" class="btn download-btn"><a href="http://server1.nlp.insight-centre.org/enwordnet-update/english-wordnet-3.2.zip">Download as WNDB</a></button>
+          </div>
+          <div style="text-align:right;" class="footer1">
+              This resource is released  by the <a href="http://globalwordnet.org/">Global WordNet Association</a> under the <a href="https://wordnet.princeton.edu/license-and-commercial-use">WordNet License</a>
+          </div>
+          <div class="text-muted footer2" style="text-align:right;">English WordNet is derived from <a href="http://wordnet.princeton.edu/">Princeton WordNet</a> by the English WordNet Community. This interface was created by <a href="http://john.mccr.ae/">John P. McCrae</a> at the <a href="http://www.nuigalway.ie">National University of Ireland Galway</a> (<a href="http://github.com/jmccrae/wordnet-angular">GitHub</a>)
+          </div>
+      </div>
+    </footer>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular-animate.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular-aria.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular-messages.min.js"></script>
+    <script src="https://cdn.gitcdn.link/cdn/angular/bower-material/v1.1.5/angular-material.js"></script>   
+    <script src="/static/app.js"></script>
+</html>
