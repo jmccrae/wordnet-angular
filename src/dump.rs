@@ -29,7 +29,10 @@ struct SynsetsHB {
     synsets : Vec<Synset>,
     entries : HashMap<String, Vec<Synset>>,
     index : String,
-    name : String
+    name : String,
+    license : &'static str,
+    site : &'static str
+
 }
 
 fn get_synsets(wordnet : &WordNet, index : &str, id : &str) 
@@ -61,7 +64,7 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
 }
 
 fn make_synsets_hb(synsets : Vec<Synset>, index : &str, 
-                   name : &str) -> SynsetsHB {
+                   name : &str, site : &WordNetSite) -> SynsetsHB {
     let mut entries = HashMap::new();
     for synset in synsets.iter() {
         for sense in synset.lemmas.iter() {
@@ -78,11 +81,23 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : &str,
                 .push(s2);
         }
     }
+    let license = match site {
+        WordNetSite::Princeton => "http://wordnet.princeton.edu/wordnet/license/",
+        WordNetSite::English => "https://github.com/globalwordnet/english-wordnet/blob/master/LICENSE.md",
+        WordNetSite::Polylingual => "http://creativecommons.org/licenses/by/4.0/"
+    };
+    let site_url = match site {
+        WordNetSite::Princeton => "http://wordnet-rdf.princeton.edu",
+        WordNetSite::English => "https://en-word.net",
+        WordNetSite::Polylingual => "http://polylingwn.linguistic-lod.org"
+    };
     SynsetsHB {
         synsets: synsets,
         entries: entries,
         index : index.to_owned(),
-        name: name.to_owned()
+        name: name.to_owned(),
+        license: license,
+        site: site_url
     }
 }
 
@@ -118,6 +133,13 @@ fn long_pos(h : &handlebars::Helper,
     Ok(())
 }
 
+#[derive(Clone,Debug,PartialEq)]
+enum WordNetSite {
+    Princeton,
+    Polylingual,
+    English
+}
+
 
 
 fn main() {
@@ -125,12 +147,23 @@ fn main() {
         .version("1.0")
         .author("John P. McCrae <john@mccr.ae>")
         .about("WordNet Angular RDF Dump Utility")
+        .arg(Arg::with_name("site")
+             .short("s")
+             .value_name("princeton|polylingual|en")
+             .help("The site design to use")
+             .takes_value(true))
         .arg(Arg::with_name("pos")
              .long("pos")
              .value_name("POS")
              .help("Only dump the particular part of speech")
              .takes_value(true));
     let matches = app.clone().get_matches();
+    let site = match matches.value_of("site").unwrap_or("princeton") {
+            "princeton" => WordNetSite::Princeton,
+            "polylingual" => WordNetSite::Polylingual,
+            "en" => WordNetSite::English,
+            _ => panic!("Bad site")
+        };
     let wordnet = wordnet::WordNet::new();
     let mut handlebars = Handlebars::new();
     handlebars.register_template_string("ttl", include_str!("ttl-dump.hbs"))
@@ -148,17 +181,24 @@ fn main() {
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix synsem: <http://www.w3.org/ns/lemon/synsem#> .
 @prefix wn: <http://wordnet-rdf.princeton.edu/ontology#> .
-@prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
-@prefix pwnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
-@prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .");
+    if site == WordNetSite::Princeton {
+        println!("@prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
+@prefix pwnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
+@prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .");
+    } else if site == WordNetSite::English {
+        println!("@prefix wordnetlicense: <https://github.com/globalwordnet/english-wordnet/blob/master/LICENSE.md> .
+@prefix pwnlemma: <https://en-word.net/rdf/lemma/> .
+@prefix pwnid: <https://en-word.net/id/> .");
+    }
+
     let filter = matches.value_of("pos").unwrap_or("");
 
     for synset_id in wordnet.get_synset_ids().expect("Could not read database") {
         if synset_id.ends_with(filter) {
             println!("{}", handlebars.render("ttl", 
                 &make_synsets_hb(get_synsets(&wordnet, "id", &synset_id.to_string()).
-                                 expect("Could not get synsets"),"id",&synset_id.to_string()))
+                                 expect("Could not get synsets"),"id",&synset_id.to_string(), &site))
                      .expect("Could not apply template"));
         }
     }

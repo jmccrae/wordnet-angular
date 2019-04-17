@@ -11,8 +11,8 @@
   <!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
   <!ENTITY synsem "http://www.w3.org/ns/lemon/synsem#">
   <!ENTITY wn "http://wordnet-rdf.princeton.edu/ontology#">
-  <!ENTITY wordnetlicense "http://wordnet.princeton.edu/wordnet/license/">
-  <!ENTITY pwn "http://wordnet-rdf.princeton.edu/rdf/">
+  <!ENTITY wordnetlicense "{{license}}">
+  <!ENTITY pwn "{{site}}/rdf/">
 ]>
 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns:dc="http://purl.org/dc/terms/"
@@ -25,8 +25,8 @@
          xmlns:skos="http://www.w3.org/2004/02/skos/core#"
          xmlns:synsem="http://www.w3.org/ns/lemon/synsem#"
          xmlns:wn="http://wordnet-rdf.princeton.edu/ontology#"
-         xmlns:wordnetlicense="http://wordnet.princeton.edu/wordnet/license/"
-         xmlns:pwn="http://wordnet-rdf.princeton.edu/rdf/">
+         xmlns:wordnetlicense="{{license}}"
+         xmlns:pwn="{{site}}/rdf/">
 {{#each entries}}
 <ontolex:LexicalEntry rdf:about="#{{lemma_escape @key}}">
     <ontolex:canonicalForm rdf:parseType="Resource">

@@ -48,11 +48,13 @@ struct SynsetsHB {
     synsets : Vec<Synset>,
     entries : HashMap<String, Vec<Synset>>,
     index : String,
-    name : String
+    name : String,
+    license : &'static str,
+    site : &'static str
 }
 
 fn make_synsets_hb(synsets : Vec<Synset>, index : String, 
-                   name : String) -> SynsetsHB {
+                   name : String, site : &WordNetSite) -> SynsetsHB {
     let mut entries = HashMap::new();
     for synset in synsets.iter() {
         for sense in synset.lemmas.iter() {
@@ -69,11 +71,23 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
                 .push(s2);
         }
     }
+    let license = match site {
+        WordNetSite::Princeton => "http://wordnet.princeton.edu/wordnet/license/",
+        WordNetSite::English => "https://github.com/globalwordnet/english-wordnet/blob/master/LICENSE.md",
+        WordNetSite::Polylingual => "http://creativecommons.org/licenses/by/4.0/"
+    };
+    let site_url = match site {
+        WordNetSite::Princeton => "http://wordnet-rdf.princeton.edu",
+        WordNetSite::English => "https://en-word.net",
+        WordNetSite::Polylingual => "http://polylingwn.linguistic-lod.org"
+    };
     SynsetsHB {
         synsets: synsets,
         entries: entries,
         index : index,
-        name: name
+        name: name,
+        license: license,
+        site: site_url
     }
 }
 
@@ -85,7 +99,7 @@ fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String)
     Ok(Response::build()
        .header(ContentType::new("text","turtle"))
        .sized_body(Cursor::new(
-            state.handlebars.render("ttl", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name)).map_err(|e| {
+            state.handlebars.render("ttl", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
@@ -98,7 +112,7 @@ fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String)
     Ok(Response::build()
        .header(ContentType::new("application","rdf+xml"))
        .sized_body(Cursor::new(
-            state.handlebars.render("rdfxml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name)).map_err(|e| {
+            state.handlebars.render("rdfxml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
@@ -113,7 +127,7 @@ fn get_xml<'r>(state : State<WordNetState>, index : String, name : String)
     Ok(Response::build()
        .header(ContentType::XML)
        .sized_body(Cursor::new(
-            state.handlebars.render("xml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name)).map_err(|e| {
+            state.handlebars.render("xml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name, &state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
@@ -259,7 +273,22 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
             .sized_body(File::open("src/english.svg").unwrap())
             .finalize()
-    } else {
+    } else if name == "english-wordnet-2019.ttl.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("english-wordnet-2019.ttl.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2019.xml.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("english-wordnet-2019.xml.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2019.zip" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("english-wordnet-2019.zip").unwrap())
+            .finalize()
+     } else {
         Response::build()
             .status(Status::NotFound)
             .finalize()

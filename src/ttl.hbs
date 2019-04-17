@@ -8,9 +8,9 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix synsem: <http://www.w3.org/ns/lemon/synsem#> .
 @prefix wn: <http://wordnet-rdf.princeton.edu/ontology#> .
-@prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
-@prefix pwnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
-@prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .
+@prefix wordnetlicense: <{{license}}> .
+@prefix pwnlemma: <{{site}}/rdf/lemma/> .
+@prefix pwnid: <{{site}}/id/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
 
@@ -26,7 +26,7 @@
 
 {{#each entries}}{{#each this}}
 <#{{lemma_escape lemmas.0.lemma}}-{{id}}>
-{{#each relations}}{{#if src_word}} wn:{{rel_type}} <http://wordnet-rdf.princeton.edu/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
+{{#each relations}}{{#if src_word}} wn:{{rel_type}} <{{site}}/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
    ontolex:isLexicalizedSenseOf pwnid:{{id}} ;
    a ontolex:LexicalSense .
 {{/each}}{{/each}}

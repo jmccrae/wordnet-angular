@@ -3,9 +3,9 @@
     <Lexicon id="pwn31-{{index}}-{{name}}"
              label="Princeton WordNet 3.1 export for {{index}}/{{name}}"
              language="en"
-             license="http://wordnet.princeton.edu/wordnet/license/"
+             license="{{license}}"
              version="3.1"
-             url="http://wordnet-rdf.princeton.edu/xml/{{index}}/{{name}}">
+             url="{{site}}/xml/{{index}}/{{name}}">
 {{#each entries}}
         <LexicalEntry id="{{@key}}">
             <Lemma writtenForm="{{this.0.lemmas.0.lemma}}" partOfSpeech="{{this.0.pos}}"/>

@@ -1,17 +1,16 @@
-
 {{#each entries}}
-<http://wordnet-rdf.princeton.edu/rdf/lemma/{{lemma_escape2 @key}}#{{lemma_escape @key}}>
+<{{../site}}/rdf/lemma/{{lemma_escape2 @key}}#{{lemma_escape @key}}>
   ontolex:canonicalForm [
     ontolex:writtenRep "{{this.0.lemmas.0.lemma}}"@en
   ] ;
-{{#each this}} ontolex:sense <http://wordnet-rdf.princeton.edu/rdf/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}> ; {{/each}}
+{{#each this}} ontolex:sense <{{../../site}}/rdf/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}> ; {{/each}}
 {{#each this.0.lemmas.0.subcats}} synsem:synBehavior [ rdfs:label "{{this}}"@en ] ; {{/each}} wn:partOfSpeech wn:{{long_pos this.0.pos}} ;
   a ontolex:LexicalEntry .  
 {{/each}}
 
 {{#each entries}}{{#each this}}
-<http://wordnet-rdf.princeton.edu/rdf/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}>
-{{#each relations}}{{#if src_word}} wn:{{rel_type}} <http://wordnet-rdf.princeton.edu/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
+<{{../../site}}/rdf/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}>
+{{#each relations}}{{#if src_word}} wn:{{rel_type}} <{{../../../site}}/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
    ontolex:isLexicalizedSenseOf pwnid:{{id}} ;
    a ontolex:LexicalSense .
 {{/each}}{{/each}}
