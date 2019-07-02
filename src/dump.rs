@@ -15,6 +15,7 @@ mod wordnet_model;
 mod omwn;
 mod links;
 mod glosstag;
+mod wordnet_read;
 
 use wordnet::{WNKey,WordNet};
 use wordnet_model::Synset;
@@ -156,7 +157,13 @@ fn main() {
              .long("pos")
              .value_name("POS")
              .help("Only dump the particular part of speech")
-             .takes_value(true));
+             .takes_value(true))
+        .arg(Arg::with_name("wn")
+            .long("wn")
+            .value_name("wn31.xml")
+            .help("The WordNet file in GWC LMF-XML format, e.g., http://john.mccr.ae/wn31.xml. Default is data/wn31.xml. If specified the dump program will first load this database")
+            .takes_value(true));
+
     let matches = app.clone().get_matches();
     let site = match matches.value_of("site").unwrap_or("princeton") {
             "princeton" => WordNetSite::Princeton,
@@ -164,6 +171,22 @@ fn main() {
             "en" => WordNetSite::English,
             _ => panic!("Bad site")
         };
+    match matches.value_of("wn") {
+        Some(wn_file) => {
+            eprintln!("Loading WordNet data");
+            if site == WordNetSite::Princeton {
+                wordnet_read::load_pwn(wn_file)
+                    .expect("Failed to load WordNet");
+            } else if site == WordNetSite::English {
+                wordnet_read::load_enwn(wn_file)
+                    .expect("Failed to load WordNet");
+            } else {
+                wordnet_read::load_gwn(wn_file)
+                    .expect("Failed to load WordNet");
+            }
+        },
+        None => {}
+    };
     let wordnet = wordnet::WordNet::new();
     let mut handlebars = Handlebars::new();
     handlebars.register_template_string("ttl", include_str!("ttl-dump.hbs"))

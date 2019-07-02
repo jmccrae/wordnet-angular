@@ -94,6 +94,7 @@ impl<'de> Visitor<'de> for PartOfSpeechVisitor {
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Synset {
     pub definition : String,
+    pub examples: Vec<String>,
     pub lemmas : Vec<Sense>,
     pub id : WNKey,
     pub ili : String,

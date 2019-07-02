@@ -276,17 +276,17 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
     } else if name == "english-wordnet-2019.ttl.gz" && state.site == WordNetSite::English {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(File::open("english-wordnet-2019.ttl.gz").unwrap())
+            .sized_body(File::open("src/english-wordnet-2019.ttl.gz").unwrap())
             .finalize()
      } else if name == "english-wordnet-2019.xml.gz" && state.site == WordNetSite::English {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(File::open("english-wordnet-2019.xml.gz").unwrap())
+            .sized_body(File::open("src/english-wordnet-2019.xml.gz").unwrap())
             .finalize()
      } else if name == "english-wordnet-2019.zip" && state.site == WordNetSite::English {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(File::open("english-wordnet-2019.zip").unwrap())
+            .sized_body(File::open("src/english-wordnet-2019.zip").unwrap())
             .finalize()
      } else {
         Response::build()
@@ -615,6 +615,49 @@ fn pwn171<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiatio
 fn pwn17<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn17", key, neg) }
 #[get("/pwn16/<key>")]
 fn pwn16<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn16", key, neg) }
+
+#[get("/english-wordnet-2019.ttl.gz")]
+fn ewn2019ttl<'r>(state : State<WordNetState>) -> Response<'r> {
+    if state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2019.ttl.gz").unwrap())
+            .finalize()
+    } else {
+        Response::build()
+            .status(Status::NotFound)
+            .finalize()
+    }
+}
+
+#[get("/english-wordnet-2019.xml.gz")]
+fn ewn2019xml<'r>(state : State<WordNetState>) -> Response<'r> {
+    if state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2019.xml.gz").unwrap())
+            .finalize()
+    } else {
+        Response::build()
+            .status(Status::NotFound)
+            .finalize()
+    }
+}
+
+#[get("/english-wordnet-2019.zip")]
+fn ewn2019zip<'r>(state : State<WordNetState>) -> Response<'r> {
+    if state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2019.zip").unwrap())
+            .finalize()
+    } else {
+        Response::build()
+            .status(Status::NotFound)
+            .finalize()
+    }
+}
+
 fn is_old_wn_key(s : &str) -> bool {
     if s.len() == 10 {
         (0usize..8usize).all(|i| s.as_bytes()[i] >= 48 && s.as_bytes()[i] <= 57)
@@ -935,7 +978,8 @@ fn main() {
                                 wn30, wn21, wn20, wn17,
                                 wn171, wn16, wn31, wn31ntgz,
                                 pwn30, pwn21, pwn20, pwn17,
-                                pwn171, pwn16]).launch();
+                                pwn171, pwn16, ewn2019zip, 
+                                ewn2019xml, ewn2019ttl]).launch();
                 },
                 Err(msg) => {
                     eprintln!("{}", msg);

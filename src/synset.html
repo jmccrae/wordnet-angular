@@ -15,6 +15,7 @@
             <span ng-bind="sense.sense_key" class="sense_key" ng-if="$ctrl.display.sensekeys"></span><span ng-if="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
         </span>
         <span ng-if="$ctrl.synset.gloss === null" ng-bind="$ctrl.synset.definition" class="definition"></span>
+        <span ng-if="$ctrl.synset.gloss === null" ng-repeat="example in $ctrl.synset.examples" class="example"> {{example}}</span>
         <span ng-if="$ctrl.synset.gloss" class="definition">
             <span ng-repeat="gloss in $ctrl.synset.gloss">
                 <span ng-if="gloss.gloss_type == 'Def'">

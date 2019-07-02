@@ -60,6 +60,12 @@ h3 {
     font-style: italic;
 }
 
+.example {
+    font-size: 0.8em;
+    color: #999;
+    font-style: italic;
+}
+
 .sense_key:before {
     content: '(';
 }

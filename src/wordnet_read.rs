@@ -98,12 +98,15 @@ fn load_xml<P : AsRef<Path>>(path : P,
     let mut sense_to_lemma = HashMap::new();
     let mut sense_to_synset = HashMap::new();
     let mut entry_id_to_forms = HashMap::new();
+    let mut entry_synset_to_sense = HashMap::new();
     let mut subcats = HashMap::new();
     let mut synset = None;
     let mut synset_id = None;
     let mut synset_ili_pos_subject = None;
     let mut in_def = false;
     let mut definition = None;
+    let mut in_example = false;
+    let mut examples = Vec::new();
     let mut synsets = HashMap::new();
     let mut relations : HashMap<WNKey,Vec<Relation>> = HashMap::new();
     let mut language = "en".to_string();
@@ -190,8 +193,9 @@ fn load_xml<P : AsRef<Path>>(path : P,
                      let word = entry_lemma.clone()
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "SenseRelation before Lemma"))?;
-                     sense_to_lemma.insert(sense_id.clone(), word);
-                     sense_to_synset.insert(sense_id, target);
+                     sense_to_lemma.insert(sense_id.clone(), word.clone());
+                     sense_to_synset.insert(sense_id.clone(), target.clone());
+                     entry_synset_to_sense.insert((word, target), sense_id);
                 } else if name.local_name == "SenseRelation" {
                     let typ = attr_value(&attributes, "relType")
                         .ok_or_else(|| WordNetLoadError::Schema(
@@ -220,9 +224,18 @@ fn load_xml<P : AsRef<Path>>(path : P,
                     let subcat = attr_value(&attributes, "subcategorizationFrame")
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "SyntacticBehaviour has no subcategorizationFrame"))?;
-                    subcats.entry(entry_id)
-                        .or_insert_with(|| Vec::new())
-                        .push(subcat);
+                    match attr_value(&attributes, "senses") {
+                        Some(sense_list) => 
+                            for sense_id in sense_list.split(" ") {
+                                subcats.entry(sense_id.to_string())
+                                    .or_insert_with(|| Vec::new())
+                                    .push(subcat.clone())
+                            },
+                        None => 
+                            subcats.entry(entry_id)
+                                .or_insert_with(|| Vec::new())
+                                .push(subcat)
+                    }
                 } else if name.local_name == "Synset" {
                     entries_read += 1;
                     if entries_read % 100000 == 0 {
@@ -243,6 +256,8 @@ fn load_xml<P : AsRef<Path>>(path : P,
                             "Synset does not have ILI"))?));
                 } else if name.local_name == "Definition" {
                     in_def = true;
+                } else if name.local_name == "Example" {
+                    in_example = true;
                 } else if name.local_name == "SynsetRelation" {
                     let typ = attr_value(&attributes, "relType")
                         .ok_or_else(|| WordNetLoadError::Schema(
@@ -280,6 +295,18 @@ fn load_xml<P : AsRef<Path>>(path : P,
                         .unwrap_or_else(|| Vec::new())
                         .iter()
                         .map(|x| {
+                            let mut synset_subcats = Vec::new();
+                            synset_subcats.extend(subcats.get(&x.0)
+                                                  .map(|x| x.clone())
+                                                  .unwrap_or_else(|| Vec::new())
+                                                  .into_iter());
+                                                  
+                            synset_subcats.extend(
+                                    entry_synset_to_sense.get(&(entry_id_to_lemma.get(&x.0).unwrap().clone(), ssid.clone()))
+                                        .and_then(|x| subcats.get(&x.to_string()))
+                                        .map(|x| x.clone())
+                                        .unwrap_or_else(|| Vec::new())
+                                        .into_iter());
                             Sense {
                                 lemma: entry_id_to_lemma.get(&x.0)
                                     .expect("Entry must have lemma")
@@ -290,10 +317,7 @@ fn load_xml<P : AsRef<Path>>(path : P,
                                     .unwrap_or_else(|| Vec::new()),
                                 sense_key: sense_keys.get(&x.0).and_then(
                                     |x| x.get(&ssid).map(|y| y.clone())),
-                                subcats: subcats.get(&x.0)
-                                    .map(|x| x.clone())
-                                    .unwrap_or_else(|| Vec::new())
-                                    .clone()
+                                subcats: synset_subcats
                             }
                         })
                         .collect();
@@ -319,6 +343,7 @@ fn load_xml<P : AsRef<Path>>(path : P,
                     synsets.insert(ssid.clone(),
                         Synset {
                             definition: defn,
+                            examples: examples.clone(),
                             lemmas: entries,
                             id: ssid,
                             ili: ili,
@@ -333,6 +358,7 @@ fn load_xml<P : AsRef<Path>>(path : P,
                         
                     synset_id = None;
                     definition = None;
+                    examples.clear();
                 } else if name.local_name == "Definition" {
                     in_def = false;
                 }
@@ -340,6 +366,8 @@ fn load_xml<P : AsRef<Path>>(path : P,
             Ok(XmlEvent::Characters(s)) => {
                 if in_def {
                     definition = Some(s);
+                } else if in_example {
+                    examples.push(s);
                 }
             },
             Ok(_) => {},
