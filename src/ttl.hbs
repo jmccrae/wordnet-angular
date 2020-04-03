@@ -15,21 +15,23 @@
 
 
 {{#each entries}}
+{{#each this}}
 <#{{lemma_escape @key}}>
   ontolex:canonicalForm [
-    ontolex:writtenRep "{{this.0.lemmas.0.lemma}}"@en
+    ontolex:writtenRep "{{this.0.lemmas.0.lemma}}"@{{this.0.lemmas.0.language}}
   ] ;
 {{#each this}} ontolex:sense <#{{lemma_escape lemmas.0.lemma}}-{{id}}> ; {{/each}}
 {{#each this.0.lemmas.0.subcats}} synsem:synBehavior [ rdfs:label "{{this}}"@en ] ; {{/each}} wn:partOfSpeech wn:{{long_pos this.0.pos}} ;
   a ontolex:LexicalEntry .  
 {{/each}}
+{{/each}}
 
-{{#each entries}}{{#each this}}
+{{#each entries}}{{#each this}}{{#each this}}
 <#{{lemma_escape lemmas.0.lemma}}-{{id}}>
 {{#each relations}}{{#if src_word}} wn:{{rel_type}} <{{site}}/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
    ontolex:isLexicalizedSenseOf pwnid:{{id}} ;
    a ontolex:LexicalSense .
-{{/each}}{{/each}}
+{{/each}}{{/each}}{{/each}}
 
 {{#each synsets}}
 pwnid:{{id}}

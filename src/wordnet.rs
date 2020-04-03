@@ -116,9 +116,9 @@ fn sqlite_query_opt_map<F,A,E>(query : &str, values : &[&rusqlite::types::ToSql]
     let conn = WordNet::open_conn()?;
     let mut stmt = conn.prepare(query)?;
     let mut res = stmt.query(values)?;
-    match res.next() {
+    match res.next()? {
         Some(res) => {
-            Ok(Some(foo(res?.get(0))?))
+            Ok(Some(foo(res.get(0)?)?))
         },
         None => Ok(None)
     }
@@ -133,8 +133,8 @@ fn sqlite_query_vec<F,A,E>(query : &str, values : &[&rusqlite::types::ToSql],
     let mut stmt = conn.prepare(query)?;
     let mut res = stmt.query(values)?;
     let mut data = Vec::new();
-    while let Some(r) = res.next() {
-        data.push(foo(r?.get(0))?);
+    while let Some(r) = res.next()? {
+        data.push(foo(r.get(0)?)?);
     }
     Ok(data)
 }
@@ -160,37 +160,37 @@ impl WordNetBuilder {
         conn.execute("CREATE TABLE synsets (
                       key TEXT NOT NULL,
                       ili TEXT NOT NULL,
-                      json TEXT NOT NULL)", &[])?;
-        conn.execute("CREATE INDEX synsets_key ON synsets (key)", &[])?;
-        conn.execute("CREATE INDEX synsets_ili ON synsets (ili)", &[])?;
+                      json TEXT NOT NULL)", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX synsets_key ON synsets (key)", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX synsets_ili ON synsets (ili)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE TABLE lemmas (
                       lemma TEXT NOT NULL,
                       form TEXT NOT NULL,
                       language TEXT NOT NULL,
                       synset TEXT NOT NULL,
-                      FOREIGN KEY (synset) REFERENCES synsets (key))", &[])?;
-        conn.execute("CREATE INDEX lemmas_form ON lemmas (form, language)", &[])?;
-        conn.execute("CREATE INDEX lemmas_synset ON lemmas (synset)", &[])?;
+                      FOREIGN KEY (synset) REFERENCES synsets (key))", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX lemmas_form ON lemmas (form, language)", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX lemmas_synset ON lemmas (synset)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE TABLE sense_keys (
                       sense_key TEXT NOT NULL,
                       synset TEXT NOT NULL,
-                      FOREIGN KEY (synset) REFERENCES synsets (key))", &[])?;
-        conn.execute("CREATE INDEX sense_keys_sense_key ON sense_keys (sense_key)", &[])?;
-        conn.execute("CREATE INDEX sense_keys_synset ON sense_keys (synset)", &[])?;
+                      FOREIGN KEY (synset) REFERENCES synsets (key))", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX sense_keys_sense_key ON sense_keys (sense_key)", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX sense_keys_synset ON sense_keys (synset)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE TABLE links (
                       synset TEXT NOT NULL,
                       type TEXT NOT NULL,
                       target TEXT NOT NULL,
-                      FOREIGN KEY (synset) REFERENCES synsets (key))", &[])?;
-        conn.execute("CREATE INDEX links_synset ON links (synset)", &[])?;
+                      FOREIGN KEY (synset) REFERENCES synsets (key))", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX links_synset ON links (synset)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE TABLE old_keys (
                       idx TEXT NOT NULL,
                       key TEXT NOT NULL,
                       synset TEXT NOT NULL,
-                      FOREIGN KEY (synset) REFERENCES synsets (key))", &[])?;
-        conn.execute("CREATE INDEX old_keys_idx ON old_keys (idx)", &[])?;
-        conn.execute("CREATE INDEX old_keys_key ON old_keys (key)", &[])?;
-        conn.execute("CREATE INDEX old_keys_synset ON old_keys (synset)", &[])?;
+                      FOREIGN KEY (synset) REFERENCES synsets (key))", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX old_keys_idx ON old_keys (idx)", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX old_keys_key ON old_keys (key)", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX old_keys_synset ON old_keys (synset)", rusqlite::NO_PARAMS)?;
         Ok(WordNetBuilder { 
             conn : conn,
             synsets : HashMap::new(),
@@ -383,7 +383,7 @@ impl WordNet {
     #[allow(dead_code)]
     pub fn get_synset_ids(&self) -> Result<Vec<WNKey>,WordNetLoadError> {
         sqlite_query_vec("SELECT DISTINCT key FROM synsets",
-                         &[], ok_wnkey)
+                         rusqlite::NO_PARAMS, ok_wnkey)
     }
 
     pub fn get_synset(&self, key : &WNKey) -> Result<Option<Synset>,WordNetLoadError> { 

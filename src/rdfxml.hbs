@@ -27,10 +27,10 @@
          xmlns:wn="http://wordnet-rdf.princeton.edu/ontology#"
          xmlns:wordnetlicense="{{license}}"
          xmlns:pwn="{{site}}/rdf/">
-{{#each entries}}
+{{#each entries}}{{#each this}}
 <ontolex:LexicalEntry rdf:about="#{{lemma_escape @key}}">
     <ontolex:canonicalForm rdf:parseType="Resource">
-        <ontolex:writtenRep xml:lang="en">{{this.0.lemmas.0.lemma}}</ontolex:writtenRep>
+        <ontolex:writtenRep xml:lang="{{this.0.lemmas.0.language}}">{{this.0.lemmas.0.lemma}}</ontolex:writtenRep>
     </ontolex:canonicalForm>
     {{#each this}}    <ontolex:sense rdf:resource="#{{lemma_escape lemmas.0.lemma}}-{{id}}"/>{{/each}}
 {{#each this.0.lemmas.0.subcats}}    <synsem:synBehavior rdf:parseType="Resource">
@@ -39,13 +39,13 @@
 {{/each}} 
     <wn:partOfSpeech rdf:resource="&wn;{{long_pos this.0.pos}}"/>
   </ontolex:LexicalEntry>
-{{/each}}
-{{#each entries}}{{#each this}}
+  {{/each}}{{/each}}
+{{#each entries}}{{#each this}}{{#each this}}
   <ontolex:LexicalSense rdf:about="#{{lemma_escape lemmas.0.lemma}}-{{id}}">
 {{#each relations}}{{#if src_word}}     <wn:{{rel_type}} rdf:resource="&pwn;lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}"/>
 {{/if}}{{/each}}
   </ontolex:LexicalSense>
-{{/each}}{{/each}}
+{{/each}}{{/each}}{{/each}}
 {{#each synsets}}
   <ontolex:LexicalConcept rdf:about="&pwn;id/{{id}}">
     <owl:sameAs rdf:resource="&ili;{{ili}}"/>

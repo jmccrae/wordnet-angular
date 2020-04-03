@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <LexicalResource xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <Lexicon id="pwn31-{{index}}-{{name}}"
-             label="Princeton WordNet 3.1 export for {{index}}/{{name}}"
-             language="en"
-             license="{{license}}"
-             version="3.1"
-             url="{{site}}/xml/{{index}}/{{name}}">
 {{#each entries}}
+    <Lexicon id="pwn31-{{../index}}-{{../name}}"
+             label="Princeton WordNet 3.1 export for {{../index}}/{{../name}}"
+             language="{{@key}}"
+             license="{{../license}}"
+             version="3.1"
+             url="{{../site}}/xml/{{../index}}/{{../name}}">
+{{#each this}}
         <LexicalEntry id="{{@key}}">
             <Lemma writtenForm="{{this.0.lemmas.0.lemma}}" partOfSpeech="{{this.0.pos}}"/>
 {{#each this}}
@@ -37,4 +38,5 @@
         </Synset>
 {{/each}}
     </Lexicon>
+{{/each}}
 </LexicalResource>

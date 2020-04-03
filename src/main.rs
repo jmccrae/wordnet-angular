@@ -46,7 +46,7 @@ use rocket::config::{Environment, Config as RocketConfig};
 #[derive(Clone,Debug,Serialize,Deserialize)]
 struct SynsetsHB {
     synsets : Vec<Synset>,
-    entries : HashMap<String, Vec<Synset>>,
+    entries : HashMap<String,HashMap<String, Vec<Synset>>>,
     index : String,
     name : String,
     license : &'static str,
@@ -66,7 +66,9 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
                     Some(ref s) => *s == sense.lemma
                 }
             });
-            entries.entry(format!("{}-{}", sense.lemma, synset.pos.to_string()))
+            entries.entry(sense.language.clone())
+                .or_insert_with(|| HashMap::new())
+                .entry(format!("{}-{}", sense.lemma, synset.pos.to_string()))
                 .or_insert_with(|| Vec::new())
                 .push(s2);
         }
@@ -127,7 +129,7 @@ fn get_xml<'r>(state : State<WordNetState>, index : String, name : String)
     Ok(Response::build()
        .header(ContentType::XML)
        .sized_body(Cursor::new(
-            state.handlebars.render("xml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name, &state.site)).map_err(|e| {
+            state.handlebars.render(if state.site == WordNetSite::Polylingual { "xml-poly" } else { "xml" }, &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name, &state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
@@ -840,6 +842,8 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     let mut handlebars = Handlebars::new();
     handlebars.register_template_string("xml", include_str!("xml.hbs"))
         .expect("Could not load xml.hbs");
+    handlebars.register_template_string("xml-poly", include_str!("xml-poly.hbs"))
+        .expect("Could not load xml-poly.hbs");
     handlebars.register_template_string("ttl", include_str!("ttl.hbs"))
         .expect("Could not load ttl.hbs");
     handlebars.register_template_string("rdfxml", include_str!("rdfxml.hbs"))
