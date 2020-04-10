@@ -106,7 +106,7 @@ angular.module('app').component('synset', {
                 return false;
             };
             ctrl.underlineSubcat = function(subcat, lemma) {
-                return subcat.replace('%s', '<span class="underline">' + lemma + '</span>');
+                return subcat.replace('----', '<span class="underline">' + lemma + '</span>');
             };
             ctrl.extendtargetsynsets = function() {
                 ctrl.targetsynsets = ctrl.targetsynsets.concat(
@@ -141,7 +141,7 @@ angular.module('app').component('synset2', {
             return false;
         };
         ctrl.underlineSubcat = function(subcat, lemma) {
-            return subcat.replace('%s', '<span class="underline">' + lemma + '</span>');
+            return subcat.replace('----', '<span class="underline">' + lemma + '</span>');
         };
         ctrl.extendtargetsynsets = function() {
             ctrl.targetsynsets = ctrl.targetsynsets.concat(

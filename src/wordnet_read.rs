@@ -111,6 +111,9 @@ fn load_xml<P : AsRef<Path>>(path : P,
     let mut relations : HashMap<WNKey,Vec<Relation>> = HashMap::new();
     let mut language = "en".to_string();
     let mut entries_read = 0;
+    let mut senses_read = 0;
+    let mut sense_orders = HashMap::new();
+    let mut lemma_orders = HashMap::new();
 
     for e in parse {
         match e {
@@ -138,6 +141,7 @@ fn load_xml<P : AsRef<Path>>(path : P,
                                 "LexicalEntry does not have an ID"));
                         }
                     }
+                    senses_read = 0;
                 } else if name.local_name == "Lemma" {
                     let entry_id = match lexical_entry_id {
                         Some(ref i) => i.clone(),
@@ -169,7 +173,7 @@ fn load_xml<P : AsRef<Path>>(path : P,
                         Some(ref i) => i.clone(),
                         None => {
                             return Err(WordNetLoadError::Schema(
-                                "Lemma outside of LexicalEntry"))
+                                "Sense outside of LexicalEntry"))
                         }
                      };
                      let target = clean_id(&attr_value(&attributes, "synset")
@@ -190,13 +194,21 @@ fn load_xml<P : AsRef<Path>>(path : P,
                      let sense_id = attr_value(&attributes, "id")
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "Sense without id"))?;
-                     let word = entry_lemma.clone()
+                     // Replace with members for future versions
+                    let word = entry_lemma.clone()
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "SenseRelation before Lemma"))?;
                      sense_to_lemma.insert(sense_id.clone(), word.clone());
                      sense_to_synset.insert(sense_id.clone(), target.clone());
-                     entry_synset_to_sense.insert((word, target), sense_id);
-                } else if name.local_name == "SenseRelation" {
+                     senses_read += 1;
+                     if sense_id.len() > 2 {
+                         if let Ok(word_order) = sense_id[(sense_id.len() - 2)..(sense_id.len())].parse::<u32>() {
+                            lemma_orders.insert((word.clone(), target.clone()), word_order);
+                         }
+                     }
+                     entry_synset_to_sense.insert((word.clone(), target.clone()), sense_id);
+                     sense_orders.insert((word, target), senses_read);
+                 } else if name.local_name == "SenseRelation" {
                     let typ = attr_value(&attributes, "relType")
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "SenseRelation without relType"))?;
@@ -290,7 +302,7 @@ fn load_xml<P : AsRef<Path>>(path : P,
                             "Synset without definition"))?;
                     let ssid = synset_id.unwrap();
                     //let entries = Vec::new();
-                    let entries = synset_to_entry.get(&ssid)
+                    let mut entries : Vec<Sense> = synset_to_entry.get(&ssid)
                         .map(|x| x.clone())
                         .unwrap_or_else(|| Vec::new())
                         .iter()
@@ -307,17 +319,18 @@ fn load_xml<P : AsRef<Path>>(path : P,
                                         .map(|x| x.clone())
                                         .unwrap_or_else(|| Vec::new())
                                         .into_iter());
+                            let lemma = entry_id_to_lemma.get(&x.0)
+                                    .expect("Entry must have lemma");
                             Sense {
-                                lemma: entry_id_to_lemma.get(&x.0)
-                                    .expect("Entry must have lemma")
-                                    .clone(),
+                                lemma: lemma.clone(),
                                 language: x.1.clone(),
                                 forms: entry_id_to_forms.get(&x.0)
                                     .map(|x| x.clone())
                                     .unwrap_or_else(|| Vec::new()),
                                 sense_key: sense_keys.get(&x.0).and_then(
                                     |x| x.get(&ssid).map(|y| y.clone())),
-                                subcats: synset_subcats
+                                subcats: synset_subcats,
+                                importance: sense_orders.get(&(lemma.clone(), ssid.clone())).map(|y| *y)
                             }
                         })
                         .collect();
@@ -340,6 +353,9 @@ fn load_xml<P : AsRef<Path>>(path : P,
                             }
                         })
                         .collect();
+                    entries.sort_by_key(|entry| {
+                       lemma_orders.get(&(entry.lemma.clone(), ssid.clone())).map(|x| *x).unwrap_or(100)
+                    });
                     synsets.insert(ssid.clone(),
                         Synset {
                             definition: defn,

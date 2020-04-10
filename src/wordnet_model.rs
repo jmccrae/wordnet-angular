@@ -113,7 +113,8 @@ pub struct Sense {
     pub language : String,
     pub forms : Vec<String>,
     pub sense_key : Option<String>,
-    pub subcats : Vec<String>
+    pub subcats : Vec<String>,
+    pub importance : Option<u32>
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]

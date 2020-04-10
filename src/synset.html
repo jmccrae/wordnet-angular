@@ -99,7 +99,7 @@
         <div ng-if="$ctrl.display.subcats" class="subcats">
             <b ng-if="$ctrl.hasSubcats()">Subcategorization Frames:</b>
             <ul ng-repeat="sense in $ctrl.synset.lemmas" ng-if="$ctrl.hasSubcats()">
-            <li class="subcat" ng-repeat="subcat in sense.subcats">{{subcat.replace('%s', sense.lemma)}}</span>
+            <li class="subcat" ng-repeat="subcat in sense.subcats">{{subcat.replace('----', sense.lemma)}}</span>
             </ul>
         </div>
         <ul ng-if="$ctrl.display.wn30 || $ctrl.display.wn_old" class="old_ids">

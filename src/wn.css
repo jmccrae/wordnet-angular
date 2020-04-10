@@ -227,3 +227,7 @@ div.option_panel_internal {
 .search-group li a {
     color: #333;
 }
+
+.search-group-parent {
+    position: relative;
+}

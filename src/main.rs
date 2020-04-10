@@ -791,7 +791,7 @@ fn lemma_escape(h : &handlebars::Helper,
                 _ : &Handlebars,
                 rc : &mut handlebars::RenderContext) -> Result<(), handlebars::RenderError> {
     let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
-    try!(rc.writer.write(param.replace(" ", "_").into_bytes().as_ref()));
+    rc.writer.write(param.replace(" ", "_").into_bytes().as_ref())?;
     Ok(())
 }
 

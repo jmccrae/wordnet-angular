@@ -296,3 +296,7 @@ td .search-group-parent {
 .footer2 {
     padding-bottom: 50px;
 }
+.search-group-parent {
+    position: relative;
+}
+

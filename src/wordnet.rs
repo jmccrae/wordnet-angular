@@ -108,7 +108,7 @@ pub type WNKey=String;
 //    }
 //}
 
-fn sqlite_query_opt_map<F,A,E>(query : &str, values : &[&rusqlite::types::ToSql],
+fn sqlite_query_opt_map<F,A,E>(query : &str, values : &[&dyn rusqlite::types::ToSql],
                              foo : F) -> Result<Option<A>,WordNetLoadError> 
                     where F: FnOnce(String) -> Result<A,E>,
                           WordNetLoadError : From<E> {
@@ -124,7 +124,7 @@ fn sqlite_query_opt_map<F,A,E>(query : &str, values : &[&rusqlite::types::ToSql]
     }
 }
 
-fn sqlite_query_vec<F,A,E>(query : &str, values : &[&rusqlite::types::ToSql],
+fn sqlite_query_vec<F,A,E>(query : &str, values : &[&dyn rusqlite::types::ToSql],
                            foo : F) -> Result<Vec<A>,WordNetLoadError> 
                     where F: Fn(String) -> Result<A,E>,
                           WordNetLoadError : From<E> {
@@ -164,6 +164,7 @@ impl WordNetBuilder {
         conn.execute("CREATE INDEX synsets_key ON synsets (key)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE INDEX synsets_ili ON synsets (ili)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE TABLE lemmas (
+                      key INTEGER PRIMARY KEY,
                       lemma TEXT NOT NULL,
                       form TEXT NOT NULL,
                       language TEXT NOT NULL,
@@ -174,8 +175,11 @@ impl WordNetBuilder {
         conn.execute("CREATE TABLE sense_keys (
                       sense_key TEXT NOT NULL,
                       synset TEXT NOT NULL,
+                      lemma TEXT NOT NULL,
+                      importance INTEGER NOT NULL,
                       FOREIGN KEY (synset) REFERENCES synsets (key))", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE INDEX sense_keys_sense_key ON sense_keys (sense_key)", rusqlite::NO_PARAMS)?;
+        conn.execute("CREATE INDEX sense_keys_lemma ON sense_keys (lemma)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE INDEX sense_keys_synset ON sense_keys (synset)", rusqlite::NO_PARAMS)?;
         conn.execute("CREATE TABLE links (
                       synset TEXT NOT NULL,
@@ -250,9 +254,9 @@ impl WordNetBuilder {
             }
             match sense.sense_key {
                 Some(ref sense_key) => {
-                    tx.execute("INSERT INTO sense_keys (sense_key, synset)
-                                  VALUES (?1, ?2)",
-                                 &[sense_key, &key_str])?;
+                    tx.execute("INSERT INTO sense_keys (sense_key, synset, lemma, importance)
+                                  VALUES (?1, ?2, ?3, ?4)",
+                                 &[sense_key, &key_str, &sense.lemma.to_lowercase(), &sense.importance.unwrap_or(100).to_string()])?;
                 },
                 None => {}
             }
@@ -394,7 +398,9 @@ impl WordNet {
     pub fn get_by_lemma(&self, lemma : &str, lang : &str) -> Result<Vec<Synset>,WordNetLoadError> { 
         sqlite_query_vec("SELECT DISTINCT json FROM synsets
                           JOIN lemmas ON lemmas.synset=synsets.key
-                          WHERE lemma=? AND language=?",
+                          LEFT JOIN sense_keys ON sense_keys.lemma == lemmas.lemma AND sense_keys.synset == synsets.key
+                          WHERE lemmas.lemma=? AND language=?
+                          ORDER BY sense_keys.importance",
                           &[&lemma.to_owned(), &lang.to_owned()],
                           |s| { serde_json::from_str(&s) })
     }
