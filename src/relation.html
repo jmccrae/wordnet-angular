@@ -1,4 +1,4 @@
-<div class="relation-title" ng-if="($ctrl.relations|filter:{'rel_type':$ctrl.relation}).length > 0">
+<div class="relation-title" ng-if="($ctrl.relations|filter:{'rel_type':$ctrl.relation}:true).length > 0">
     <a href="#" ng-click="$ctrl.show = !$ctrl.show">{{$ctrl.fullname}} ({{($ctrl.relations|filter:{'rel_type':$ctrl.relation}).length}})</a></div>
 <span ng-repeat="relation in $ctrl.relations | filter:{'rel_type':$ctrl.relation}" ng-show="$ctrl.show">
     <div ng-if="relation.src_word" class="relation-word">
