@@ -126,10 +126,15 @@ fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String)
 #[get("/xml/<index>/<name>")]
 fn get_xml<'r>(state : State<WordNetState>, index : String, name : String) 
         -> Result<Response<'r>, String> {
+    let xml_template = match state.site {
+        WordNetSite::Polylingual => "xml-poly",
+        WordNetSite::English => "xml-english",
+        _ => "xml"
+    };
     Ok(Response::build()
        .header(ContentType::XML)
        .sized_body(Cursor::new(
-            state.handlebars.render(if state.site == WordNetSite::Polylingual { "xml-poly" } else { "xml" }, &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name, &state.site)).map_err(|e| {
+            state.handlebars.render(xml_template, &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name, &state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
@@ -289,6 +294,21 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
         Response::build()
             .header(ContentType::Binary)
             .sized_body(File::open("src/english-wordnet-2019.zip").unwrap())
+            .finalize()
+    } else if name == "english-wordnet-2020.ttl.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2020.ttl.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2020.xml.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2020.xml.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2020.zip" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2020.zip").unwrap())
             .finalize()
      } else {
         Response::build()
@@ -844,6 +864,8 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
         .expect("Could not load xml.hbs");
     handlebars.register_template_string("xml-poly", include_str!("xml-poly.hbs"))
         .expect("Could not load xml-poly.hbs");
+    handlebars.register_template_string("xml-english", include_str!("xml-english.hbs"))
+        .expect("Could not load xml-english.hbs");
     handlebars.register_template_string("ttl", include_str!("ttl.hbs"))
         .expect("Could not load ttl.hbs");
     handlebars.register_template_string("rdfxml", include_str!("rdfxml.hbs"))

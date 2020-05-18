@@ -377,6 +377,8 @@ fn load_xml<P : AsRef<Path>>(path : P,
                     examples.clear();
                 } else if name.local_name == "Definition" {
                     in_def = false;
+                } else if name.local_name == "Example" {
+                    in_example = false;
                 }
             },
             Ok(XmlEvent::Characters(s)) => {

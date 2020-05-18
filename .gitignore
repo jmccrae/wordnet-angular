@@ -16,3 +16,6 @@ wordnet.nt.gz
 *.db2
 tmp*
 polylingwn.xml
+
+english-wordnet-2019.xml
+test_load.py

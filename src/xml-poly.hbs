@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LexicalResource xmlns:dc="http://purl.org/dc/elements/1.1/">
+{{#each entries}}
+    <Lexicon id="polywn-{{../index}}-{{../name}}"
+             label="Polylingual WordNet export for {{../index}}/{{../name}}"
+             language="{{@key}}"
+             license="{{../license}}"
+             version="1.0"
+             url="{{../site}}/xml/{{../index}}/{{../name}}">
+{{#each this}}
+        <LexicalEntry id="{{@key}}">
+            <Lemma writtenForm="{{this.0.lemmas.0.lemma}}" partOfSpeech="{{this.0.pos}}"/>
+{{#each this}}
+            <Sense id="{{lemmas.0.lemma}}-{{id}}" synset="pwn30-{{id}}">
+{{#each relations}}
+{{#if src_word}}
+                <SenseRelation relType="{{rel_type}}" 
+                               target="{{trg_word}}-{{target}}"/>
+{{/if}}
+{{/each}}
+            </Sense>
+{{/each}}
+{{#each this.0.lemmas.0.subcats}}
+            <SyntacticBehaviour subcategorizationFrame="{{this}}"/>
+{{/each}}
+        </LexicalEntry>
+{{/each}}
+    </Lexicon>
+{{/each}}
+    <Lexicon id="polywn-{{index}}-{{name}}"
+             label="Polylingual WordNet export for {{index}}/{{name}}"
+             language="mul"
+             license="{{license}}"
+             version="1.0"
+             url="{{site}}/xml/{{index}}/{{name}}">
+{{#each synsets}}
+        <Synset id="pwn31-{{id}}" ili="{{ili}}" partOfSpeech="{{pos}}"
+                dc:subject="{{subject}}">
+            <Definition>{{definition}}</Definition>
+{{#each relations}}
+{{#if src_word}}
+{{else}}
+            <SynsetRelation relType="{{rel_type}}" target="{{target}}"/>
+{{/if}}
+{{/each}}
+        </Synset>
+{{/each}}
+  </Lexicon>
+</LexicalResource>
