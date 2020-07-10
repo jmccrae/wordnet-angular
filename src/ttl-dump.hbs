@@ -1,26 +1,31 @@
 {{#each entries}}
-<{{../site}}/rdf/lemma/{{lemma_escape2 @key}}#{{lemma_escape @key}}>
+<{{../site}}/> lime:entry <{{../site}}/lemma/{{lemma_escape2 @key}}#{{lemma_escape @key}}> .
+
+<{{../site}}/lemma/{{lemma_escape2 @key}}#{{lemma_escape @key}}>
   ontolex:canonicalForm [
     ontolex:writtenRep "{{this.0.lemmas.0.lemma}}"@en
   ] ;
-{{#each this}} ontolex:sense <{{../../site}}/rdf/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}> ; {{/each}}
+{{#each this}} ontolex:sense <{{../../site}}/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}> ; {{/each}}
 {{#each this.0.lemmas.0.subcats}} synsem:synBehavior [ rdfs:label "{{this}}"@en ] ; {{/each}} wn:partOfSpeech wn:{{long_pos this.0.pos}} ;
   a ontolex:LexicalEntry .  
 {{/each}}
 
 {{#each entries}}{{#each this}}
-<{{../../site}}/rdf/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}>
-{{#each relations}}{{#if src_word}} wn:{{rel_type}} <{{../../../site}}/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
+<{{../../site}}/lemma/{{lemma_escape lemmas.0.lemma}}#{{lemma_escape lemmas.0.lemma}}-{{id}}>
+{{#each relations}}{{#if src_word}} wn:{{rel_type}} <{{../../../site}}/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
    ontolex:isLexicalizedSenseOf pwnid:{{id}} ;
    a ontolex:LexicalSense .
 {{/each}}{{/each}}
 
 {{#each synsets}}
 pwnid:{{id}}
-  owl:sameAs ili:{{ili}} ;
+  wn:ili ili:{{ili}} ;
   wn:partOfSpeech wn:{{long_pos pos}} ;
   dc:subject "{{subject}}" ;
   wn:definition [ rdf:value "{{definition}}"@en ] ;
 {{#each relations}}{{#if src_word}}{{else}}  wn:{{rel_type}} pwnid:{{target}} ; {{/if}}{{/each}}
-   a ontolex:LexicalConcept . 
+{{#each examples}}  wn:example [ rdf:value "{{escape_quote this}}" ] ;
+{{/each}}
+  a ontolex:LexicalConcept ;
+  skos:inConcept <{{../site}}/> .
 {{/each}}

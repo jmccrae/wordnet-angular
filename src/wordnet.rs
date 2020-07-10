@@ -124,6 +124,19 @@ fn sqlite_query_opt_map<F,A,E>(query : &str, values : &[&dyn rusqlite::types::To
     }
 }
 
+fn sqlite_opt(query : &str) -> Result<Option<u32>,WordNetLoadError> {
+    let conn = WordNet::open_conn()?;
+    let mut stmt = conn.prepare(query)?;
+    let mut res = stmt.query(rusqlite::NO_PARAMS)?;
+    match res.next()? {
+        Some(res) => {
+            Ok(Some(res.get(0)?))
+        },
+        None => Ok(None)
+    }
+}
+
+
 fn sqlite_query_vec<F,A,E>(query : &str, values : &[&dyn rusqlite::types::ToSql],
                            foo : F) -> Result<Vec<A>,WordNetLoadError> 
                     where F: Fn(String) -> Result<A,E>,
@@ -489,6 +502,16 @@ impl WordNet {
                          ok_wnkey)// { WNKey::from_str(&s) })
     }
 
+    pub fn entries(&self) -> Result<u32, WordNetLoadError> {
+        sqlite_opt("SELECT COUNT(*) FROM lemmas")
+            .map(|x| x.unwrap())
+    }
+
+    pub fn synsets(&self) -> Result<u32, WordNetLoadError> {
+        sqlite_opt("SELECT COUNT(*) FROM synsets")
+            .map(|x| x.unwrap())
+    }
+
 }
 
 quick_error! {
@@ -515,6 +538,11 @@ quick_error! {
         SQLite(err : rusqlite::Error) {
             from()
             display("SQLite error: {}", err)
+            cause(err)
+        }
+        Int(err : std::num::ParseIntError) {
+            from()
+            display("Int error: {}", err)
             cause(err)
         }
 //        BadKey(msg : String) {

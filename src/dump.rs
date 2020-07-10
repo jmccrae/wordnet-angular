@@ -118,6 +118,14 @@ fn lemma_escape2(h : &handlebars::Helper,
     Ok(())
 }
 
+fn escape_quote(h : &handlebars::Helper,
+    _ : &Handlebars,
+    rc : &mut handlebars::RenderContext) -> Result<(), handlebars::RenderError> {
+    let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
+    rc.writer.write(param.replace("\"","\\\"").into_bytes().as_ref())?;
+    Ok(())
+}
+
 
 fn long_pos(h : &handlebars::Helper,
                 _ : &Handlebars,
@@ -193,6 +201,7 @@ fn main() {
         .expect("Could not load ttl.hbs");
     handlebars.register_helper("lemma_escape", Box::new(lemma_escape));
     handlebars.register_helper("lemma_escape2", Box::new(lemma_escape2));
+    handlebars.register_helper("escape_quote", Box::new(escape_quote));
     handlebars.register_helper("long_pos", Box::new(long_pos));
     println!("@prefix dc: <http://purl.org/dc/terms/> .
 @prefix ili: <http://ili.globalwordnet.org/ili/> .
@@ -203,7 +212,7 @@ fn main() {
 @prefix schema: <http://schema.org/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix synsem: <http://www.w3.org/ns/lemon/synsem#> .
-@prefix wn: <http://wordnet-rdf.princeton.edu/ontology#> .
+@prefix wn: <https://globalwordnetnet.github.io/schemas/wn#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .");
     if site == WordNetSite::Princeton {
         println!("@prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
@@ -211,8 +220,16 @@ fn main() {
 @prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .");
     } else if site == WordNetSite::English {
         println!("@prefix wordnetlicense: <https://github.com/globalwordnet/english-wordnet/blob/master/LICENSE.md> .
-@prefix pwnlemma: <https://en-word.net/rdf/lemma/> .
-@prefix pwnid: <https://en-word.net/id/> .");
+@prefix pwnlemma: <https://en-word.net/lemma/> .
+@prefix pwnid: <https://en-word.net/id/> .
+
+</> a lime:Lexicon, skos:ConceptSet ;
+  lime:language \"en\" ;
+  lime:linguisticCatalog wn: ;");
+println!("
+  lime:lexicalEntries {} ;
+  lime:concepts {} .
+", wordnet.entries().expect("DB error"), wordnet.synsets().expect("DB error"));
     }
 
     let filter = matches.value_of("pos").unwrap_or("");

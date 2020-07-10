@@ -7,9 +7,9 @@
 @prefix schema: <http://schema.org/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix synsem: <http://www.w3.org/ns/lemon/synsem#> .
-@prefix wn: <http://wordnet-rdf.princeton.edu/ontology#> .
+@prefix wn: <https://globalwordnet.github.io/schemas/wn#> .
 @prefix wordnetlicense: <{{license}}> .
-@prefix pwnlemma: <{{site}}/rdf/lemma/> .
+@prefix pwnlemma: <{{site}}/lemma/> .
 @prefix pwnid: <{{site}}/id/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
@@ -35,10 +35,11 @@
 
 {{#each synsets}}
 pwnid:{{id}}
-  owl:sameAs ili:{{ili}} ;
+  wn:ili ili:{{ili}} ;
   wn:partOfSpeech wn:{{long_pos pos}} ;
   dc:subject "{{subject}}" ;
   wn:definition [ rdf:value "{{definition}}"@en ] ;
 {{#each relations}}{{#if src_word}}{{else}}  wn:{{rel_type}} pwnid:{{target}} ; {{/if}}{{/each}}
-   a ontolex:LexicalConcept . 
+   a ontolex:LexicalConcept ;
+   skos:inScheme <{{site}}/> .
 {{/each}}
