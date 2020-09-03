@@ -223,7 +223,7 @@ fn main() {
 @prefix pwnlemma: <https://en-word.net/lemma/> .
 @prefix pwnid: <https://en-word.net/id/> .
 
-</> a lime:Lexicon, skos:ConceptSet ;
+<https://en-word.net/> a lime:Lexicon, skos:ConceptSet ;
   lime:language \"en\" ;
   lime:linguisticCatalog wn: ;");
 println!("
