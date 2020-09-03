@@ -213,17 +213,18 @@ fn main() {
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix synsem: <http://www.w3.org/ns/lemon/synsem#> .
 @prefix wn: <https://globalwordnetnet.github.io/schemas/wn#> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .");
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix dct: <http://purl.org/dc/terms/> .");
     if site == WordNetSite::Princeton {
         println!("@prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
 @prefix pwnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
 @prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .");
     } else if site == WordNetSite::English {
-        println!("@prefix wordnetlicense: <https://github.com/globalwordnet/english-wordnet/blob/master/LICENSE.md> .
-@prefix pwnlemma: <https://en-word.net/lemma/> .
+        println!("@prefix pwnlemma: <https://en-word.net/lemma/> .
 @prefix pwnid: <https://en-word.net/id/> .
 
-<https://en-word.net/> a lime:Lexicon, skos:ConceptSet ;
+<https://en-word.net/> a lime:Lexicon, ontolex:ConceptSet ;
+  dct:title \"Open English WordNet\"@en ;
   lime:language \"en\" ;
   lime:linguisticCatalog wn: ;");
 println!("
