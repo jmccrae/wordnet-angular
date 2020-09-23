@@ -212,7 +212,7 @@ fn main() {
 @prefix schema: <http://schema.org/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix synsem: <http://www.w3.org/ns/lemon/synsem#> .
-@prefix wn: <https://globalwordnetnet.github.io/schemas/wn#> .
+@prefix wn: <https://globalwordnet.github.io/schemas/wn#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix dct: <http://purl.org/dc/terms/> .");
     if site == WordNetSite::Princeton {
@@ -226,7 +226,7 @@ fn main() {
 <https://en-word.net/> a lime:Lexicon, ontolex:ConceptSet ;
   dct:title \"Open English WordNet\"@en ;
   lime:language \"en\" ;
-  lime:linguisticCatalog wn: ;");
+  lime:linguisticCatalog <https://globalwordnet.github.io/schemas/wn> ;");
 println!("
   lime:lexicalEntries {} ;
   lime:concepts {} .
