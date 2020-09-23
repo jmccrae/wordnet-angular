@@ -226,6 +226,7 @@ fn main() {
 <https://en-word.net/> a lime:Lexicon, ontolex:ConceptSet ;
   dct:title \"Open English WordNet\"@en ;
   lime:language \"en\" ;
+  dct:license <https://creativecommons.org/licenses/by/4.0/> ;
   lime:linguisticCatalog <https://globalwordnet.github.io/schemas/wn> ;");
 println!("
   lime:lexicalEntries {} ;
