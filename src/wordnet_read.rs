@@ -7,10 +7,20 @@ use std::path::Path;
 use xml::reader::{EventReader, XmlEvent};
 use links::{load_links};
 use wordnet::{WordNetLoadError,WordNetBuilder,WNKey, WordNet};
-use wordnet_model::{Sense,Synset,Relation,PartOfSpeech};
+use wordnet_model::{Sense,Synset,Relation,PartOfSpeech,Pronunciation};
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
 use glosstag::build_glosstags;
+
+
+fn unmap_sense_key(sk : &str) -> String {
+    if sk.len() > 4 {
+        sk[4..].replace("__", "%").replace("-ap-", "'").replace("-sl-", "/").replace("-ex-", "!").replace("-cm-",",")
+    } else {
+        "".to_string()
+    }
+}
+
 
 fn attr_value(attr : &Vec<OwnedAttribute>, name : &'static str) -> Option<String> {
     attr.iter().find(|a| a.name.local_name == name).map(|a| a.value.clone())
@@ -100,6 +110,7 @@ fn load_xml<P : AsRef<Path>>(path : P,
     let mut entry_id_to_forms = HashMap::new();
     let mut entry_synset_to_sense = HashMap::new();
     let mut subcats = HashMap::new();
+    let mut subcat_refs = HashMap::new();
     let mut synset = None;
     let mut synset_id = None;
     let mut synset_ili_pos_subject = None;
@@ -107,13 +118,17 @@ fn load_xml<P : AsRef<Path>>(path : P,
     let mut definition = None;
     let mut in_example = false;
     let mut examples = Vec::new();
-    let mut synsets = HashMap::new();
+    let mut synsets : HashMap<String, Synset> = HashMap::new();
     let mut relations : HashMap<WNKey,Vec<Relation>> = HashMap::new();
     let mut language = "en".to_string();
     let mut entries_read = 0;
     let mut senses_read = 0;
     let mut sense_orders = HashMap::new();
     let mut lemma_orders = HashMap::new();
+    let mut variety = None;
+    let mut in_pron = false;
+    let mut pronunciations = Vec::new();
+    let mut entry_id_to_prons = HashMap::new();
 
     for e in parse {
         match e {
@@ -179,25 +194,40 @@ fn load_xml<P : AsRef<Path>>(path : P,
                      let target = clean_id(&attr_value(&attributes, "synset")
                         .ok_or_else(|| WordNetLoadError::Schema(
                                 "Sense does not have a synset"))?)?;
+                     let sense_id = attr_value(&attributes, "id")
+                        .ok_or_else(|| WordNetLoadError::Schema(
+                            "Sense without id"))?;
                      match attr_value(&attributes, "identifier") {
                         Some(i) => {
                             sense_keys.entry(entry_id.clone())
                                 .or_insert_with(|| HashMap::new())
                                 .insert(target.clone(), i);
                         },
-                        None => {}
+                        None => {
+                            if sense_id.contains("__") {
+                                sense_keys.entry(entry_id.clone())
+                                    .or_insert_with(|| HashMap::new())
+                                    .insert(target.clone(), 
+                                            unmap_sense_key(&sense_id));
+                            }
+                        }
                      };
                      synset = Some(target.clone());
                      synset_to_entry.entry(target.clone())
                         .or_insert_with(|| Vec::new())
                         .push((entry_id, language.clone()));
-                     let sense_id = attr_value(&attributes, "id")
-                        .ok_or_else(|| WordNetLoadError::Schema(
-                            "Sense without id"))?;
                      // Replace with members for future versions
-                    let word = entry_lemma.clone()
+                     let word = entry_lemma.clone()
                         .ok_or_else(|| WordNetLoadError::Schema(
                             "SenseRelation before Lemma"))?;
+                     match attr_value(&attributes, "subcat") {
+                         Some(scs) => {
+                             subcat_refs.insert((word.clone(), target.clone()),
+                                scs.split(" ").map(|s| s.to_string()).
+                                collect::<Vec<String>>());
+                         },
+                         None => {}
+                     }
                      sense_to_lemma.insert(sense_id.clone(), word.clone());
                      sense_to_synset.insert(sense_id.clone(), target.clone());
                      senses_read += 1;
@@ -230,23 +260,40 @@ fn load_xml<P : AsRef<Path>>(path : P,
                             target: targ
                         });
                 } else if name.local_name == "SyntacticBehaviour" {
-                    let entry_id = lexical_entry_id.clone()
-                        .ok_or_else(|| WordNetLoadError::Schema(
-                            "SyntacticBehaviour outside of LexicalEntry"))?;
-                    let subcat = attr_value(&attributes, "subcategorizationFrame")
-                        .ok_or_else(|| WordNetLoadError::Schema(
-                            "SyntacticBehaviour has no subcategorizationFrame"))?;
-                    match attr_value(&attributes, "senses") {
-                        Some(sense_list) => 
-                            for sense_id in sense_list.split(" ") {
-                                subcats.entry(sense_id.to_string())
-                                    .or_insert_with(|| Vec::new())
-                                    .push(subcat.clone())
-                            },
-                        None => 
-                            subcats.entry(entry_id)
-                                .or_insert_with(|| Vec::new())
-                                .push(subcat)
+                    match lexical_entry_id {
+                        Some(ref lid) => {
+                            let entry_id = lid.clone();
+                            let subcat = attr_value(&attributes, "subcategorizationFrame")
+                                .ok_or_else(|| WordNetLoadError::Schema(
+                                    "SyntacticBehaviour has no subcategorizationFrame"))?;
+                            match attr_value(&attributes, "senses") {
+                                Some(sense_list) => 
+                                    for sense_id in sense_list.split(" ") {
+                                        subcats.entry(sense_id.to_string())
+                                            .or_insert_with(|| Vec::new())
+                                            .push(subcat.clone())
+                                    },
+                                None => 
+                                    subcats.entry(entry_id)
+                                        .or_insert_with(|| Vec::new())
+                                        .push(subcat)
+                            }
+                        },
+                        None => {
+                            let id = attr_value(&attributes, "id")
+                                .ok_or_else(|| WordNetLoadError::Schema(
+                                    "SyntacticBehaviour has no ID"))?;
+                            let subcat = attr_value(&attributes, "subcategorizationFrame")
+                                .ok_or_else(|| WordNetLoadError::Schema(
+                                    "SyntacticBehaviour has no subcategorizationFrame"))?;
+                            for synset in synsets.iter_mut() {
+                                for sense in synset.1.lemmas.iter_mut() {
+                                    if sense.subcat_refs.iter().any(|sr| *sr == id) {
+                                        sense.subcats.push(subcat.clone());
+                                    }
+                                }
+                            }
+                        }
                     }
                 } else if name.local_name == "Synset" {
                     entries_read += 1;
@@ -288,10 +335,16 @@ fn load_xml<P : AsRef<Path>>(path : P,
                             rel_type: typ,
                             target: targ.to_string()
                         });
-}
+                } else if name.local_name == "Pronunciation" {
+                    variety = attr_value(&attributes, "variety");
+                    in_pron = true;
+                }
             },
             Ok(XmlEvent::EndElement { name, .. }) => {
                 if name.local_name == "LexicalEntry" {
+                    entry_id_to_prons.insert(lexical_entry_id.unwrap(),
+                                             pronunciations.clone());
+                    pronunciations = Vec::new();
                     lexical_entry_id = None;
                     entry_lemma = None;
                 } else if name.local_name == "Sense" {
@@ -330,7 +383,12 @@ fn load_xml<P : AsRef<Path>>(path : P,
                                 sense_key: sense_keys.get(&x.0).and_then(
                                     |x| x.get(&ssid).map(|y| y.clone())),
                                 subcats: synset_subcats,
-                                importance: sense_orders.get(&(lemma.clone(), ssid.clone())).map(|y| *y)
+                                subcat_refs: subcat_refs.remove(
+                                    &(lemma.clone(), ssid.clone()))
+                                    .unwrap_or_else(|| Vec::new()),
+                                importance: sense_orders.get(&(lemma.clone(), ssid.clone())).map(|y| *y),
+                                pronunciations: entry_id_to_prons.get(&x.0)
+                                    .map(|x| x.clone()).unwrap_or_else(|| Vec::new())
                             }
                         })
                         .collect();
@@ -379,6 +437,9 @@ fn load_xml<P : AsRef<Path>>(path : P,
                     in_def = false;
                 } else if name.local_name == "Example" {
                     in_example = false;
+                } else if name.local_name == "Pronunciation" {
+                    variety = None;
+                    in_pron = false;
                 }
             },
             Ok(XmlEvent::Characters(s)) => {
@@ -386,6 +447,10 @@ fn load_xml<P : AsRef<Path>>(path : P,
                     definition = Some(s);
                 } else if in_example {
                     examples.push(s);
+                } else if in_pron {
+                    let v = variety;
+                    variety = None;
+                    pronunciations.push(Pronunciation { value:s, variety: v });
                 }
             },
             Ok(_) => {},

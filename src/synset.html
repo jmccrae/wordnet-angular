@@ -8,11 +8,12 @@
     <div class="lemmas">
         <span class="pos">({{$ctrl.synset.pos}})</span>
         <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
-            <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-if="!$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
-            <!--<span class="forms" ng-show="$ctrl.display.forms">
-                <span class="form" ng-repeat="form in sense.forms">{{form}}</span>
-            </span>-->
-            <span ng-bind="sense.sense_key" class="sense_key" ng-if="$ctrl.display.sensekeys"></span><span ng-if="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
+            <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-if="!$ctrl.display.sensekeys && !$ctrl.display.pronunciation">{{$last ? '' : ','}}</span><span ng-if="$ctrl.display.pronunciation && sense.pronunciations.length > 0" class="pronunciation">
+                (Pronunciation:
+                <span ng-repeat="pron in sense.pronunciations">
+                    <span ng-if="pron.variety" class="pronunciation_variety">({{pron.variety}})</span>
+                    {{pron.value}}{{$last ? '' : ', '}}</span>)
+            </span><span ng-if="!$ctrl.display.sensekeys && $ctrl.display.pronunciation">{{$last ? '' : ','}}</span><span ng-bind="sense.sense_key" class="sense_key" ng-if="$ctrl.display.sensekeys"></span><span ng-if="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
         </span>
         <span ng-if="$ctrl.synset.gloss === null" ng-bind="$ctrl.synset.definition" class="definition"></span>
         <span ng-if="$ctrl.synset.gloss === null" ng-repeat="example in $ctrl.synset.examples" class="example"> {{example}}</span>

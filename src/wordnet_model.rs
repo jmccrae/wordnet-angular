@@ -114,7 +114,9 @@ pub struct Sense {
     pub forms : Vec<String>,
     pub sense_key : Option<String>,
     pub subcats : Vec<String>,
-    pub importance : Option<u32>
+    pub subcat_refs : Vec<String>,
+    pub importance : Option<u32>,
+    pub pronunciations : Vec<Pronunciation>
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -125,4 +127,9 @@ pub struct Relation {
     pub target : String
 }
 
+#[derive(Clone,Debug,Serialize,Deserialize)]
+pub struct Pronunciation {
+    pub value : String,
+    pub variety : Option<String>
+}
 

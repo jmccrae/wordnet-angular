@@ -300,3 +300,16 @@ td .search-group-parent {
     position: relative;
 }
 
+body.md-default-theme, body, html.md-default-theme, html {
+    background-color: #fff;
+}
+
+.pronunciation_variety {
+    font-size: 90%;
+    color: #555;
+}
+
+.pronunciation {
+    font-size: 70%;
+    font-family: serif;
+}
