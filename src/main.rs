@@ -308,7 +308,22 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
      } else if name == "english-wordnet-2020.zip" && state.site == WordNetSite::English {
         Response::build()
             .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2020.zip").unwrap())
+            .sized_body(File::open("src/english-wordnet-2021.zip").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2021.ttl.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2021.ttl.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2021.xml.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2021.xml.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2021.zip" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2021.zip").unwrap())
             .finalize()
      } else {
         Response::build()
