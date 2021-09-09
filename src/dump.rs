@@ -227,7 +227,9 @@ fn main() {
   dct:title \"Open English WordNet\"@en ;
   lime:language \"en\" ;
   dct:license <https://creativecommons.org/licenses/by/4.0/> ;
-  lime:linguisticCatalog <https://globalwordnet.github.io/schemas/wn> ;");
+  lime:linguisticCatalog <https://globalwordnet.github.io/schemas/wn> ;
+  owl:imports <https://globalwordnet.github.io/schemas/wn.rdf>,
+    <http://www.w3.org/ns/lemon/all> ;");
 println!("
   lime:lexicalEntries {} ;
   lime:concepts {} .
