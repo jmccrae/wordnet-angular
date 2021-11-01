@@ -43,7 +43,7 @@ h3 {
 
 .definition {
     font-size: 0.8em;
-    color: #777;
+    color: #333;
     font-style: italic;
 }
 
@@ -189,7 +189,7 @@ div.option_panel_internal {
 
 .gloss_word a {
     text-decoration: none;
-    color: #777;
+    color: #333;
 }
 
 .definition:hover a {
