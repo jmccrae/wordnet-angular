@@ -116,7 +116,8 @@ pub struct Sense {
     pub subcats : Vec<String>,
     pub subcat_refs : Vec<String>,
     pub importance : Option<u32>,
-    pub pronunciations : Vec<Pronunciation>
+    pub pronunciations : Vec<Pronunciation>,
+    pub entry_no : u32
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]

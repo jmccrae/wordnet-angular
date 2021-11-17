@@ -374,6 +374,14 @@ fn load_xml<P : AsRef<Path>>(path : P,
                                         .into_iter());
                             let lemma = entry_id_to_lemma.get(&x.0)
                                     .expect("Entry must have lemma");
+                            let entry_no = match x.0.chars().next_back() {
+                                Some('1') => 1,
+                                Some('2') => 2,
+                                Some('3') => 3,
+                                Some('4') => 4, // This could cause bugs
+                                _ => 0
+                            };
+
                             Sense {
                                 lemma: lemma.clone(),
                                 language: x.1.clone(),
@@ -388,7 +396,8 @@ fn load_xml<P : AsRef<Path>>(path : P,
                                     .unwrap_or_else(|| Vec::new()),
                                 importance: sense_orders.get(&(lemma.clone(), ssid.clone())).map(|y| *y),
                                 pronunciations: entry_id_to_prons.get(&x.0)
-                                    .map(|x| x.clone()).unwrap_or_else(|| Vec::new())
+                                    .map(|x| x.clone()).unwrap_or_else(|| Vec::new()),
+                                entry_no
                             }
                         })
                         .collect();

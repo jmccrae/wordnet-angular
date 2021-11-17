@@ -77,7 +77,12 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : &str,
                     Some(ref s) => *s == sense.lemma
                 }
             });
-            entries.entry(format!("{}-{}", sense.lemma, synset.pos.to_string()))
+            let id = if sense.entry_no > 0 {
+                format!("{}-{}-{}", sense.lemma, synset.pos.to_string(), sense.entry_no)
+            } else {
+                format!("{}-{}", sense.lemma, synset.pos.to_string())
+            };
+            entries.entry(id)
                 .or_insert_with(|| Vec::new())
                 .push(s2);
         }
@@ -217,11 +222,11 @@ fn main() {
 @prefix dct: <http://purl.org/dc/terms/> .");
     if site == WordNetSite::Princeton {
         println!("@prefix wordnetlicense: <http://wordnet.princeton.edu/wordnet/license/> .
-@prefix pwnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
-@prefix pwnid: <http://wordnet-rdf.princeton.edu/id/> .");
+@prefix wnlemma: <http://wordnet-rdf.princeton.edu/rdf/lemma/> .
+@prefix wnid: <http://wordnet-rdf.princeton.edu/id/> .");
     } else if site == WordNetSite::English {
-        println!("@prefix pwnlemma: <https://en-word.net/lemma/> .
-@prefix pwnid: <https://en-word.net/id/> .
+        println!("@prefix wnlemma: <https://en-word.net/lemma/> .
+@prefix wnid: <https://en-word.net/id/> .
 
 <https://en-word.net/> a lime:Lexicon, ontolex:ConceptSet ;
   dct:title \"Open English WordNet\"@en ;

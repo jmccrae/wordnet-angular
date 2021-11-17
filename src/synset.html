@@ -8,7 +8,7 @@
     <div class="lemmas">
         <span class="pos">({{$ctrl.synset.pos}})</span>
         <span class="lemma" ng-repeat="sense in $ctrl.synset.lemmas">
-            <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-if="!$ctrl.display.sensekeys && !$ctrl.display.pronunciation">{{$last ? '' : ','}}</span><span ng-if="$ctrl.display.pronunciation && sense.pronunciations.length > 0" class="pronunciation">
+            <a target="_self" ng-href="/lemma/{{sense.lemma}}" ng-if="sense.lemma != $ctrl.focus">{{sense.lemma}}</a><span class="underline" ng-if="sense.lemma == $ctrl.focus">{{sense.lemma}}</span><span ng-if="sense.entry_no > 0"><sup>{{sense.entry_no}}</sup></span><span ng-if="!$ctrl.display.sensekeys && !$ctrl.display.pronunciation">{{$last ? '' : ','}}</span><span ng-if="$ctrl.display.pronunciation && sense.pronunciations.length > 0" class="pronunciation">
                 (Pronunciation:
                 <span ng-repeat="pron in sense.pronunciations">
                     <span ng-if="pron.variety" class="pronunciation_variety">({{pron.variety}})</span>

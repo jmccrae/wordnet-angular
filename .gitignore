@@ -21,3 +21,5 @@ english-wordnet-2019.xml
 test_load.py
 english-wordnet-2020.ttl.gz
 english-wordnet-2021.ttl.gz
+
+wn.xml
