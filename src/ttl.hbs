@@ -29,17 +29,17 @@
 {{#each entries}}{{#each this}}{{#each this}}
 <#{{lemma_escape lemmas.0.lemma}}-{{id}}>
 {{#each relations}}{{#if src_word}} wn:{{rel_type}} <{{site}}/rdf/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
-   ontolex:isLexicalizedSenseOf pwnid:{{id}} ;
+   ontolex:isLexicalizedSenseOf wnid:{{id}} ;
    a ontolex:LexicalSense .
 {{/each}}{{/each}}{{/each}}
 
 {{#each synsets}}
-pwnid:{{id}}
+wnid:{{id}}
   wn:ili ili:{{ili}} ;
   wn:partOfSpeech wn:{{long_pos pos}} ;
   dc:subject "{{subject}}" ;
   wn:definition [ rdf:value "{{definition}}"@en ] ;
-{{#each relations}}{{#if src_word}}{{else}}  wn:{{rel_type}} pwnid:{{target}} ; {{/if}}{{/each}}
+{{#each relations}}{{#if src_word}}{{else}}  wn:{{rel_type}} wnid:{{target}} ; {{/if}}{{/each}}
    a ontolex:LexicalConcept ;
    skos:inScheme <{{site}}/> .
 {{/each}}
