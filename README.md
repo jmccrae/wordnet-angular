@@ -30,8 +30,23 @@ Note: this project is dependent on [Rocket](http://rocket.rs) and needs the **ni
     
     OPTIONS:
         -p <port>                         The port to start the server on
-        -s <princeton|polylingual>        The site design to use
+        -s <princeton|polylingual|en>     The site design to use
             --wn <wn31.xml>               The WordNet file in GWC LMF-XML format, e.g., http://john.mccr.ae/wn31.xml.
                                           Default is data/wn31.xml
                                           
-To create the database please run with the `--reload` flag.
+
+## Quick Start
+
+To create an instance of http://en-word.net/ run the following commands
+
+```sh
+wget https://en-word.net/static/english-wordnet-2021.xml.gz
+gunzip english-wordnet-2021.xml.gz
+target/release/wordnet-angular --reload -s en --wn english-wordnet-2021.xml
+```
+
+If you get the following error then delete the file `wordnet.db` and try again
+
+```
+Failed to load WordNet: SQLite error: table synsets already exists
+```
