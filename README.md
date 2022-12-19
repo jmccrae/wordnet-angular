@@ -12,7 +12,7 @@ https://en-word.net/
 
 The system is compiled and built with Cargo it can be built as usual with
 
-    cargo build --release
+    cargo +nightly build --release
 
 The server is a single executable at `target/release/wordnet-angular`
 

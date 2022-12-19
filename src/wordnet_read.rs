@@ -309,10 +309,10 @@ fn load_xml<P : AsRef<Path>>(path : P,
                             "Synset does not have ILI"))?,
                         attr_value(&attributes, "partOfSpeech")
                         .ok_or_else(|| WordNetLoadError::Schema(
-                            "Synset does not have ILI"))?,
-                        attr_value(&attributes, "subject")
+                            "Synset does not have part of speech"))?,
+                        attr_value(&attributes, "lexfile")
                         .ok_or_else(|| WordNetLoadError::Schema(
-                            "Synset does not have ILI"))?));
+                            "Synset does not have subject"))?));
                 } else if name.local_name == "Definition" {
                     in_def = true;
                 } else if name.local_name == "Example" {
