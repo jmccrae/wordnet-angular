@@ -36,8 +36,9 @@ use rocket::http::{ContentType, Status};
 use std::env;
 use std::io::Cursor;
 use std::fs::File;
+use std::fs;
 use std::path::Path;
-use handlebars::{Handlebars};
+use handlebars::Handlebars;
 use std::collections::HashMap;
 use rocket::config::{Environment, Config as RocketConfig};
 //use stable_skiplist::OrderedSkipList;
@@ -341,6 +342,21 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             .sized_body(File::open("src/english-wordnet-2022.zip").unwrap())
             .finalize()
       } else {
+        let paths = fs::read_dir("src/res/").expect("No resource directory");
+
+        for path in paths {
+            let path_str = path.unwrap().file_name().to_string_lossy().into_owned();
+            if path_str == name {
+                let mut r = Response::build();
+                if name.ends_with(".css") {
+                    return r.header(ContentType::CSS)
+                        .sized_body(File::open("src/res/".to_owned() + &name).unwrap()).finalize();
+                } else if name.ends_with(".js") {
+                    return r.header(ContentType::JavaScript)
+                        .sized_body(File::open("src/res/".to_owned() + &name).unwrap()).finalize();
+                }
+            }
+        }
         Response::build()
             .status(Status::NotFound)
             .finalize()

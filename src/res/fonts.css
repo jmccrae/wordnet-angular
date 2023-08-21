@@ -1,0 +1,24 @@
+@font-face {
+  font-family: 'Arvo';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/arvo/v20/tDbD2oWUg0MKqScQ6A.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Arvo';
+  font-style: normal;
+  font-weight: 700;
+  src: url(https://fonts.gstatic.com/s/arvo/v20/tDbM2oWUg0MKoZw1-LPK9g.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Dosis';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/dosis/v27/HhyJU5sn9vOmLxNkIwRSjTVNWLEJN7Ml2xMB.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Scope One';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/scopeone/v14/WBLnrEXKYFlGHrOKmGDFXEXI.ttf) format('truetype');
+}
