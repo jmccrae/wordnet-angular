@@ -209,7 +209,7 @@ fn main() {
     handlebars.register_helper("escape_quote", Box::new(escape_quote));
     handlebars.register_helper("long_pos", Box::new(long_pos));
     println!("@prefix dc: <http://purl.org/dc/terms/> .
-@prefix ili: <http://ili.globalwordnet.org/ili/> .
+@prefix ili: <http://globalwordnet.org/ili/> .
 @prefix lime: <http://www.w3.org/ns/lemon/lime#> .
 @prefix ontolex: <http://www.w3.org/ns/lemon/ontolex#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .

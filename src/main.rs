@@ -341,6 +341,21 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             .header(ContentType::Binary)
             .sized_body(File::open("src/english-wordnet-2022.zip").unwrap())
             .finalize()
+      } else if name == "english-wordnet-2023.ttl.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2023.ttl.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2023.xml.gz" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2023.xml.gz").unwrap())
+            .finalize()
+     } else if name == "english-wordnet-2023.zip" && state.site == WordNetSite::English {
+        Response::build()
+            .header(ContentType::Binary)
+            .sized_body(File::open("src/english-wordnet-2023.zip").unwrap())
+            .finalize()
       } else {
         let paths = fs::read_dir("src/res/").expect("No resource directory");
 
