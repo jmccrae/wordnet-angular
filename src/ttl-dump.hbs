@@ -15,6 +15,16 @@
 {{#each relations}}{{#if src_word}} wn:{{rel_type}} <{{../../../site}}/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> ; {{/if}}{{/each}}
    ontolex:isLexicalizedSenseOf wnid:{{id}} ;
    a ontolex:LexicalSense .
+{{#each relations}}{{#if src_word}}
+[] a ontolex:SenseRelation ;
+  vartrans:source <{{../../../site}}/lemma/{{lemma_escape ../lemmas.0.lemma}}#{{lemma_escape ../lemmas.0.lemma}}-{{../id}}>
+  vartrans:category wn:{{rel_type}} ;
+  vartrans:target <{{../../../site}}/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> .
+{{/if}}{{/each}}
+{{/each}}
+{{/each}}
+
+{{#each entries}}{{#each this}}
 {{/each}}{{/each}}
 
 {{#each synsets}}
@@ -28,4 +38,11 @@ wnid:{{id}}
 {{/each}}
   a ontolex:LexicalConcept ;
   skos:inScheme <{{../site}}/> .
+
+{{#each relations}}{{#if src_word}}{{else}}
+[] 
+  vartrans:source wnid:{{../id}} ;
+  vartrans:category wn:{{rel_type}} ;
+  vartrans:target wnid:{{target}} .
+{{/if}}{{/each}}
 {{/each}}
