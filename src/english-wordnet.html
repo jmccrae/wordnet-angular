@@ -21,6 +21,9 @@
                 <a ng-bind="result.display"></a>
             </li>
           </ul>
+          <ul class="list-group search-group" ng-if="ctrl.results && ctrl.results.length == 0 && ctrl.query.length > 0">
+              <li class="list-group-item"><i>No results</i></li>
+            </ul>
         </td>
       </tr>
     </table>
