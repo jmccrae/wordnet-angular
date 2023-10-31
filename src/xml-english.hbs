@@ -6,7 +6,7 @@
              language="{{@key}}"
              email="english-wordnet@googlegroups.com"
              license="https://creativecommons.org/licenses/by/4.0/"
-             version="2020"
+             version="2023"
              url="{{../site}}/xml/{{../index}}/{{../name}}">
 {{#each this}}
         <LexicalEntry id="{{@key}}">
@@ -21,8 +21,10 @@
 {{/each}}
             </Sense>
 {{/each}}
-{{#each this.0.lemmas.0.subcats}}
-            <SyntacticBehaviour subcategorizationFrame="{{this}}"/>
+{{#each this}}
+{{#each lemmas.0.subcats}}
+            <SyntacticBehaviour subcategorizationFrame="{{this}}" senses="{{../lemmas.0.lemma}}-{{../id}}"/>
+{{/each}}
 {{/each}}
         </LexicalEntry>
 {{/each}}
