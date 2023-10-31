@@ -15,6 +15,9 @@
                     {{pron.value}}{{$last ? '' : ', '}}</span>)
             </span><span ng-if="!$ctrl.display.sensekeys && $ctrl.display.pronunciation">{{$last ? '' : ','}}</span><span ng-bind="sense.sense_key" class="sense_key" ng-if="$ctrl.display.sensekeys"></span><span ng-if="$ctrl.display.sensekeys">{{$last ? '' : ','}}</span>
         </span>
+        <span ng-repeat="rel in $ctrl.synset.relations | filter:{'rel_type': 'domain_topic'}:true">
+            ((<i><a href="/id/{{rel.target}}/" ng-repeat="r in $ctrl.targetsynsets | filter:{'id': rel.target}">{{r.lemmas[0].lemma}}</a></i>))
+        </span>
         <span ng-if="$ctrl.synset.gloss === null" ng-bind="$ctrl.synset.definition" class="definition"></span>
         <span ng-if="$ctrl.synset.gloss === null" ng-repeat="example in $ctrl.synset.examples" class="example"> <span ng-if='!example.startsWith("\"")'>&ldquo;</span>{{example}}<span ng-if='!example.startsWith("\"")'>&rdquo;</span></span>
         <span ng-if="$ctrl.synset.gloss" class="definition">

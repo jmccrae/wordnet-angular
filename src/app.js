@@ -1,3 +1,5 @@
+maxEntriesToLoad = 100;
+
 angular.module('app', ['ngMaterial'])
     .config(function($locationProvider) {
         $locationProvider.html5Mode(true);
@@ -23,6 +25,7 @@ angular.module('app').controller('SearchController',
     var self = this;
     self.index = 'lemma';
     self.results = [];
+    self.query_cleared = false;
     self.query = '';
     var m = $location.path().match("/(.*)/(.*)");
     self.selectedItemChange = function(item) {
@@ -30,6 +33,7 @@ angular.module('app').controller('SearchController',
             $location.path("/"+ self.index + "/"+item.item);
             $scope.$parent.focus = item.item;
             self.results = [];
+            self.query_cleared = true;
             $http.get("/json/"+ self.index + "/"+item.item).then(
                 function(result) {
                     $scope.$parent.synsets = result.data;
@@ -66,6 +70,7 @@ angular.module('app').controller('SearchController',
                 //outerContainer.style.height = innerContainer.style.height;
                 if(self.query === searched) {
                     self.results = result.data;
+                    self.query_cleared = false;
                 }
             }, function(response) {
                 console.log(response.data);
@@ -93,8 +98,13 @@ angular.module('app').component('synset', {
             ctrl.targetsynsets = [];
             $http.get("/json_rel/" + this.synset.id).then(
                     function(response) {
-                        ctrl.targetsynsets = response.data.slice(0,25);
-                        ctrl.targetsynsetsextra = response.data.slice(25,response.data.length);
+                        ctrl.targetsynsets = response.data.slice(0,maxEntriesToLoad);
+                        ctrl.targetsynsets = ctrl.targetsynsets.filter((value, index, self) =>
+                            index === self.findIndex((t) => (
+                                t.id === value.id
+                            ))
+                        );
+                        ctrl.targetsynsetsextra = response.data.slice(maxEntriesToLoad,response.data.length);
                     }, function(response) { /*alert(response);*/ }
             );
             ctrl.hasSubcats = function() {
@@ -110,8 +120,8 @@ angular.module('app').component('synset', {
             };
             ctrl.extendtargetsynsets = function() {
                 ctrl.targetsynsets = ctrl.targetsynsets.concat(
-                        ctrl.targetsynsetsextra.slice(0,25));
-                ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(25,ctrl.targetsynsetsextra.length);
+                        ctrl.targetsynsetsextra.slice(0,maxEntriesToLoad));
+                ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(maxEntriesToLoad,ctrl.targetsynsetsextra.length);
             };
         }
     });
@@ -128,8 +138,13 @@ angular.module('app').component('synset2', {
         ctrl.targetsynsets = [];
         $http.get("/json_rel/" + this.synset.id).then(
                 function(response) {
-                    ctrl.targetsynsets = response.data.slice(0,50);
-                    ctrl.targetsynsetsextra = response.data.slice(50,response.data.length);
+                    ctrl.targetsynsets = response.data.slice(0,maxEntriesToLoad);
+                    ctrl.targetsynsets = ctrl.targetsynsets.filter((value, index, self) =>
+                        index === self.findIndex((t) => (
+                            t.id === value.id
+                        ))
+                    );
+                    ctrl.targetsynsetsextra = response.data.slice(maxEntriesToLoad,response.data.length);
                 }, function(response) { /*alert(response);*/ }
         );
         ctrl.hasSubcats = function() {
@@ -145,8 +160,8 @@ angular.module('app').component('synset2', {
         };
         ctrl.extendtargetsynsets = function() {
             ctrl.targetsynsets = ctrl.targetsynsets.concat(
-                    ctrl.targetsynsetsextra.slice(0,25));
-            ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(25,ctrl.targetsynsetsextra.length);
+                    ctrl.targetsynsetsextra.slice(0,maxEntriesToLoad));
+            ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(maxEntriesToLoad,ctrl.targetsynsetsextra.length);
         };
  }
     //,
