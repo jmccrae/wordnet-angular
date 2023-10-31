@@ -116,12 +116,29 @@ angular.module('app').component('synset', {
                 return false;
             };
             ctrl.underlineSubcat = function(subcat, lemma) {
-                return subcat.replace('----', '<span class="underline">' + lemma + '</span>');
+                if(lemma.includes(' ') && subcat.includes('----s')) {
+                    let words = lemma.split(' ');
+                    let word1 = words.shift();
+                    let subcat2 = subcat.replace('----s', "----s " + words.join(" "));
+                    return subcat2.replace('----', '<span class="underline">' + word1 + '</span>');
+                } else {
+                     return subcat.replace('----', '<span class="underline">' + lemma + '</span>');
+                }
             };
             ctrl.extendtargetsynsets = function() {
                 ctrl.targetsynsets = ctrl.targetsynsets.concat(
                         ctrl.targetsynsetsextra.slice(0,maxEntriesToLoad));
                 ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(maxEntriesToLoad,ctrl.targetsynsetsextra.length);
+            };
+            ctrl.replaceSubcat = function(subcat, lemma) {
+                if(lemma.includes(' ') && subcat.includes('----s')) {
+                    let words = lemma.split(' ');
+                    let word1 = words.shift();
+                    let subcat2 = subcat.replace('----s', "----s " + words.join(" "));
+                    return subcat2.replace('----', word1);
+                } else {
+                    return subcat.replace('----', lemma);
+                }
             };
         }
     });
@@ -156,12 +173,29 @@ angular.module('app').component('synset2', {
             return false;
         };
         ctrl.underlineSubcat = function(subcat, lemma) {
-            return subcat.replace('----', '<span class="underline">' + lemma + '</span>');
+            if(lemma.includes(' ') && subcat.includes('----s')) {
+                let words = lemma.split(' ');
+                let word1 = words.shift();
+                let subcat2 = subcat.replace('----s', "----s " + words.join(" "));
+                return subcat2.replace('----', '<span class="underline">' + word1 + '</span>');
+            } else {
+                return subcat.replace('----', '<span class="underline">' + lemma + '</span>');
+            }
         };
         ctrl.extendtargetsynsets = function() {
             ctrl.targetsynsets = ctrl.targetsynsets.concat(
                     ctrl.targetsynsetsextra.slice(0,maxEntriesToLoad));
             ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(maxEntriesToLoad,ctrl.targetsynsetsextra.length);
+        };
+        ctrl.replaceSubcat = function(subcat, lemma) {
+            if(lemma.includes(' ') && subcat.includes('----s')) {
+                let words = lemma.split(' ');
+                let word1 = words.shift();
+                let subcat2 = subcat.replace('----s', "----s " + words.join(" "));
+                return subcat2.replace('----', word1);
+            } else {
+                return subcat.replace('----', lemma);
+            }
         };
  }
     //,
