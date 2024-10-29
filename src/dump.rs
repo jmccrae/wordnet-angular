@@ -17,8 +17,8 @@ mod links;
 mod glosstag;
 mod wordnet_read;
 
-use wordnet::{WNKey,WordNet};
-use wordnet_model::Synset;
+use crate::wordnet::{WNKey,WordNet};
+use crate::wordnet_model::Synset;
 use std::collections::{HashMap,HashSet};
 use clap::{App,Arg};
 use handlebars::{Handlebars};

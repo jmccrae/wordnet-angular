@@ -2,6 +2,7 @@
 name = "wordnet-angular"
 version = "0.1.0"
 authors = ["John McCrae <john@mccr.ae>"]
+edition = "2021"
 
 [[bin]]
 name = "wordnet-angular"
@@ -12,8 +13,6 @@ name = "wordnet-rdf-dump"
 path = "src/dump.rs"
 
 [dependencies]
-rocket = "*"
-pear = "0.1.5"
 stable-skiplist = "0.1.1"
 xml-rs = "0.6"
 quick-error = "1.2.3"
@@ -23,3 +22,5 @@ serde_json = "*"
 serde_derive = "*"
 handlebars = "0.29.1"
 rusqlite = "0.20.0"
+rocket = "0.5.1"
+once_cell = "1.20.2"

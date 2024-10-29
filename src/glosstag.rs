@@ -4,7 +4,7 @@ use std::io::{BufReader};
 use xml::reader::{EventReader, XmlEvent};
 use xml::attribute::OwnedAttribute;
 use std::collections::HashMap;
-use wordnet::{WNKey, WordNetLoadError, WordNetBuilder};
+use crate::wordnet::{WNKey, WordNetLoadError, WordNetBuilder};
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct GlossTagWord {

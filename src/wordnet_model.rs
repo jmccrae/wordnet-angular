@@ -2,11 +2,11 @@
 use serde::de::{Visitor, Deserializer, Error as DeError};
 use serde::{Serialize, Serializer,Deserialize};
 use std::collections::HashMap;
-use wordnet::WordNetLoadError;
+use crate::wordnet::WordNetLoadError;
 use std::fmt::{Formatter, Result as FormatResult};
 use std::str::FromStr;
-use links::Link;
-use glosstag::Gloss;
+use crate::links::Link;
+use crate::glosstag::Gloss;
 
 type WNKey=String;
 

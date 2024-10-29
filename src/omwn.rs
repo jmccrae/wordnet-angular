@@ -2,7 +2,7 @@ use std::fs::File;
 use std::path::Path;
 use std::collections::HashMap;
 use std::io::{BufRead,BufReader};
-use wordnet::{WNKey, WordNetLoadError, WordNetBuilder};
+use crate::wordnet::{WNKey, WordNetLoadError, WordNetBuilder};
 
 pub fn load_omwn<P: AsRef<Path>>(p : P, wordnet : &WordNetBuilder)
         -> Result<HashMap<WNKey, Vec<String>>, WordNetLoadError> {

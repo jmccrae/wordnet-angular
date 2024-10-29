@@ -1,5 +1,5 @@
 use std::path::Path;
-use wordnet::{WNKey,WordNetLoadError,WordNetBuilder};
+use crate::wordnet::{WNKey,WordNetLoadError,WordNetBuilder};
 use std::collections::{HashMap,HashSet};
 use std::io::{BufRead,BufReader};
 use std::fs::{read_dir,File};

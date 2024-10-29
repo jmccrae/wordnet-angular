@@ -2,10 +2,10 @@
 //! disk
 //use glosstag::{Gloss,build_glosstags};
 use std::collections::HashMap;
-use links::{Link,LinkType};
+use crate::links::{Link,LinkType};
 use serde_json;
 use rusqlite;
-use wordnet_model::{Synset};
+use crate::wordnet_model::Synset;
 
 pub type WNKey=String;
 

@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-
 #[macro_use] extern crate rocket;
 extern crate stable_skiplist;
 extern crate xml;
@@ -25,24 +23,22 @@ use wordnet::{WNKey, WordNet};
 use wordnet_model::Synset;
 use clap::{App, Arg, ArgMatches};
 use std::process::exit;
-use rocket::State;
 use rocket::Response;
 use rocket::Request;
 use rocket::request::{FromRequest,Outcome};
-use rocket::http::hyper::header::{Location,CacheDirective,CacheControl};
-use rocket::http::Header;
-use rocket::Outcome::Success;
-use rocket::http::{ContentType, Status};
+use rocket::http::ContentType;
+use rocket::response::content::{RawHtml, RawJson};
+use rocket::response::Redirect;
 use std::env;
-use std::io::Cursor;
 use std::fs::File;
 use std::fs;
 use std::path::Path;
+use std::ops::Deref;
 use handlebars::Handlebars;
 use std::collections::HashMap;
-use rocket::config::{Environment, Config as RocketConfig};
-//use stable_skiplist::OrderedSkipList;
-//use wordnet::Sense;
+use rocket::config::Config as RocketConfig;
+use once_cell::sync::Lazy;
+use std::sync::{Mutex, MutexGuard};
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 struct SynsetsHB {
@@ -94,268 +90,132 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
     }
 }
 
-fn html_utf8() -> ContentType { ContentType::with_params("text", "html", ("charset", "UTF-8")) }
+//fn html_utf8() -> ContentType { ContentType::with_params("text", "html", ("charset", "UTF-8")) }
 
 #[get("/ttl/<index>/<name>")]
-fn get_ttl<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, String> {
-    Ok(Response::build()
-       .header(ContentType::new("text","turtle"))
-       .sized_body(Cursor::new(
-            state.handlebars.render("ttl", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
+fn get_ttl<'r>(index : String, name : String) 
+        -> Result<(ContentType, String), String> {
+    let state = WordNetState::get();
+    Ok((ContentType::new("text","turtle"), state.handlebars.render("ttl", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
-       .finalize())
 }
 
 #[get("/rdf/<index>/<name>")]
-fn get_rdf<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, String> {
-    Ok(Response::build()
-       .header(ContentType::new("application","rdf+xml"))
-       .sized_body(Cursor::new(
-            state.handlebars.render("rdfxml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
+fn get_rdf<'r>(index : String, name : String) 
+        -> Result<(ContentType, String), String> {
+    let state = WordNetState::get();
+    Ok((ContentType::new("application","rdf+xml"), state.handlebars.render("rdfxml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
-       .finalize())
 }
 
 
 
 #[get("/xml/<index>/<name>")]
-fn get_xml<'r>(state : State<WordNetState>, index : String, name : String) 
-        -> Result<Response<'r>, String> {
-    let xml_template = match state.site {
+fn get_xml<'r>(index : String, name : String) 
+        -> Result<(ContentType, String), String> {
+    let state = WordNetState::get();
+    let xml_template = match *state.site {
         WordNetSite::Polylingual => "xml-poly",
         WordNetSite::English => "xml-english",
         _ => "xml"
     };
-    Ok(Response::build()
-       .header(ContentType::XML)
-       .sized_body(Cursor::new(
-            state.handlebars.render(xml_template, &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name, &state.site)).map_err(|e| {
+    Ok((ContentType::XML, state.handlebars.render(xml_template, &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
-       .finalize())
 }
 
 #[get("/flag/<code>")]
-fn get_flag<'r>(code : String) -> Result<Response<'r>,::std::io::Error> {
-    Ok(Response::build()
-        .header(ContentType::GIF)
-        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-        .sized_body(File::open(&format!("flags/{}.gif", code))?)
-        .finalize())
+fn get_flag<'r>(code : String) -> Result<(ContentType, File),::std::io::Error> {
+    Ok((ContentType::GIF, File::open(&format!("flags/{}.gif", code))?))
+}
+
+#[derive(Responder)]
+enum StaticResponse {
+    I((ContentType, &'static str)),
+    F((ContentType, File)),
 }
 
 #[get("/static/<name>")]
-fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
+fn get_static(name : String) -> Option<StaticResponse> {
+    let state = WordNetState::get();
     if name == "app.js" {
-        if state.site == WordNetSite::Princeton || state.site == WordNetSite::English {
-            Response::build()
-                .header(ContentType::JavaScript)
-                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-                .sized_body(Cursor::new(include_str!("app.js")))
-                //.sized_body(File::open("src/app.js").unwrap())
-                .finalize()
+        if *state.site == WordNetSite::Princeton || *state.site == WordNetSite::English {
+            Some(StaticResponse::I((ContentType::JavaScript, include_str!("app.js"))))
         } else {
-            Response::build()
-                .header(ContentType::JavaScript)
-                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-                .sized_body(Cursor::new(include_str!("polyling-app.js")))
-                //.sized_body(File::open("src/app.js").unwrap())
-                .finalize()
+            Some(StaticResponse::I((ContentType::JavaScript, include_str!("polyling-app.js"))))
         }
 
     } else if name == "favicon.ico" {
-        Response::build()
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            //.sized_body(Cursor::new(include_str!("favicon.ico")))
-            .sized_body(match state.site {
-                WordNetSite::Princeton => File::open("src/favicon.ico").unwrap(),
-                WordNetSite::Polylingual => File::open("src/polyling-favicon.ico").unwrap(),
-                WordNetSite::English => File::open("src/english-favicon.ico").unwrap()
-            })
-            .finalize()
+        Some(StaticResponse::F((ContentType::Icon, File::open("src/favicon.ico").unwrap())))
     } else if name == "synset.html" {
-        if state.site == WordNetSite::Princeton || state.site == WordNetSite::English {
-            Response::build()
-                .header(html_utf8())
-                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-                .sized_body(Cursor::new(include_str!("synset.html")))
-                //.sized_body(File::open("src/synset.html").unwrap())
-                .finalize()
+        if *state.site == WordNetSite::Princeton || *state.site == WordNetSite::English {
+            Some(StaticResponse::I((ContentType::HTML, include_str!("synset.html"))))
         } else {
-            Response::build()
-                .header(html_utf8())
-                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-                .sized_body(Cursor::new(include_str!("polyling-synset.html")))
-                //.sized_body(File::open("src/synset.html").unwrap())
-                .finalize()
+            Some(StaticResponse::I((ContentType::HTML, include_str!("polyling-synset.html"))))
         }
     } else if name == "wordnet.html" {
-        if state.site == WordNetSite::Princeton {
-            Response::build()
-                .header(html_utf8())
-                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-                .sized_body(Cursor::new(include_str!("wordnet.html")))
-                //.sized_body(File::open("src/wordnet.html").unwrap())
-                .finalize()
-        } else if state.site == WordNetSite::English {
-            Response::build()
-                .header(html_utf8())
-                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-                .sized_body(Cursor::new(include_str!("english-wordnet.html")))
-                //.sized_body(File::open("src/wordnet.html").unwrap())
-                .finalize()
-
+        if *state.site == WordNetSite::Princeton {
+            Some(StaticResponse::I((ContentType::HTML, include_str!("wordnet.html"))))
+        } else if *state.site == WordNetSite::English {
+            Some(StaticResponse::I((ContentType::HTML, include_str!("english-wordnet.html"))))
         } else {
-            Response::build()
-                .header(html_utf8())
-                .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-                .sized_body(Cursor::new(include_str!("polyling-wordnet.html")))
-                //.sized_body(File::open("src/wordnet.html").unwrap())
-                .finalize()
+            Some(StaticResponse::I((ContentType::HTML, include_str!("polyling-wordnet.html"))))
         }
     } else if name == "relation.html" {
-        Response::build()
-            .header(html_utf8())
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(Cursor::new(include_str!("relation.html")))
-            //.sized_body(File::open("src/relation.html").unwrap())
-            .finalize()
+        Some(StaticResponse::I((ContentType::HTML, include_str!("relation.html"))))
     } else if name == "princeton.png" {
-        Response::build()
-            .header(ContentType::PNG)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(File::open("src/princeton.png").unwrap())
-            .finalize()
+        Some(StaticResponse::F((ContentType::PNG, File::open("src/princeton.png").unwrap())))
     } else if name == "verbnet.gif" {
-        Response::build()
-            .header(ContentType::GIF)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(File::open("src/verbnet.gif").unwrap())
-            .finalize()
+        Some(StaticResponse::F((ContentType::GIF, File::open("src/verbnet.gif").unwrap())))
     } else if name == "wikipedia.png" {
-        Response::build()
-            .header(ContentType::PNG)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(File::open("src/wikipedia.png").unwrap())
-            .finalize()
-    } else if name == "wn.css" && state.site == WordNetSite::Princeton {
-        Response::build()
-            .header(ContentType::CSS)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(Cursor::new(include_str!("wn.css")))
-            //.sized_body(File::open("src/wn.css").unwrap())
-            .finalize()
-    } else if name == "wordnet.nt.gz" && state.site == WordNetSite::Princeton {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("wordnet.nt.gz").unwrap())
-            .finalize()
-    } else if name == "polylingwn.css" && state.site == WordNetSite::Polylingual {
-        Response::build()
-            .header(ContentType::CSS)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(Cursor::new(include_str!("polylingwn.css")))
-            .finalize()
-    } else if name == "polylingwn.svg" && state.site == WordNetSite::Polylingual {
-        Response::build()
-            .header(ContentType::SVG)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(File::open("src/polylingwn.svg").unwrap())
-            .finalize()
-    } else if name == "english.css" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::CSS)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(Cursor::new(include_str!("english.css")))
-            .finalize()
-    } else if name == "english.svg" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::SVG)
-            .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-            .sized_body(File::open("src/english.svg").unwrap())
-            .finalize()
-    } else if name == "english-wordnet-2019.ttl.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2019.ttl.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2019.xml.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2019.xml.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2019.zip" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2019.zip").unwrap())
-            .finalize()
-    } else if name == "english-wordnet-2020.ttl.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2020.ttl.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2020.xml.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2020.xml.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2020.zip" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2020.zip").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2021.ttl.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2021.ttl.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2021.xml.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2021.xml.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2021.zip" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2021.zip").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2022.ttl.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2022.ttl.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2022.xml.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2022.xml.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2022.zip" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2022.zip").unwrap())
-            .finalize()
-      } else if name == "english-wordnet-2023.ttl.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2023.ttl.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2023.xml.gz" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2023.xml.gz").unwrap())
-            .finalize()
-     } else if name == "english-wordnet-2023.zip" && state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2023.zip").unwrap())
-            .finalize()
+        Some(StaticResponse::F((ContentType::PNG, File::open("src/wikipedia.png").unwrap())))
+    } else if name == "wn.css" && *state.site == WordNetSite::Princeton {
+        Some(StaticResponse::I((ContentType::CSS, include_str!("wn.css"))))
+    } else if name == "wordnet.nt.gz" && *state.site == WordNetSite::Princeton {
+        Some(StaticResponse::I((ContentType::Binary, "wordnet.nt.gz")))
+    } else if name == "polylingwn.css" && *state.site == WordNetSite::Polylingual {
+        Some(StaticResponse::I((ContentType::CSS, include_str!("polylingwn.css"))))
+    } else if name == "polylingwn.svg" && *state.site == WordNetSite::Polylingual {
+        Some(StaticResponse::I((ContentType::SVG, "polylingwn.svg")))
+    } else if name == "english.css" && *state.site == WordNetSite::English {
+        Some(StaticResponse::I((ContentType::CSS, include_str!("english.css"))))
+    } else if name == "english.svg" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::SVG, File::open("src/english.svg").unwrap())))
+    } else if name == "english-wordnet-2019.ttl.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2019.ttl.gz").unwrap())))
+     } else if name == "english-wordnet-2019.xml.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2019.xml.gz").unwrap())))
+     } else if name == "english-wordnet-2019.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2019.zip").unwrap())))
+    } else if name == "english-wordnet-2020.ttl.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2020.ttl.gz").unwrap())))
+     } else if name == "english-wordnet-2020.xml.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2020.xml.gz").unwrap())))
+     } else if name == "english-wordnet-2020.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2020.zip").unwrap())))
+     } else if name == "english-wordnet-2021.ttl.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2021.ttl.gz").unwrap())))
+     } else if name == "english-wordnet-2021.xml.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2021.xml.gz").unwrap())))
+     } else if name == "english-wordnet-2021.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2021.zip").unwrap())))
+     } else if name == "english-wordnet-2022.ttl.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2022.ttl.gz").unwrap())))
+     } else if name == "english-wordnet-2022.xml.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2022.xml.gz").unwrap())))
+     } else if name == "english-wordnet-2022.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2022.zip").unwrap())))
+     } else if name == "english-wordnet-2023.ttl.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2023.ttl.gz").unwrap())))
+     } else if name == "english-wordnet-2023.xml.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2023.xml.gz").unwrap())))
+     } else if name == "english-wordnet-2023.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2023.zip").unwrap())))
       } else {
         let paths = fs::read_dir("src/res/").expect("No resource directory");
 
@@ -364,17 +224,13 @@ fn get_static<'r>(state : State<WordNetState>, name : String) -> Response<'r> {
             if path_str == name {
                 let mut r = Response::build();
                 if name.ends_with(".css") {
-                    return r.header(ContentType::CSS)
-                        .sized_body(File::open("src/res/".to_owned() + &name).unwrap()).finalize();
+                    return Some(StaticResponse::F((ContentType::CSS, File::open("src/res/".to_owned() + &name).unwrap())))
                 } else if name.ends_with(".js") {
-                    return r.header(ContentType::JavaScript)
-                        .sized_body(File::open("src/res/".to_owned() + &name).unwrap()).finalize();
+                    return Some(StaticResponse::F((ContentType::JavaScript, File::open("src/res/".to_owned() + &name).unwrap())))
                 }
             }
         }
-        Response::build()
-            .status(Status::NotFound)
-            .finalize()
+        None
     }
 }
 
@@ -411,21 +267,19 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
 }
 
 #[get("/json/<index>/<id>")]
-fn synset<'r>(index : String, id : String, 
-              status : State<WordNetState>) 
-        -> Result<Response<'r>,String> {
+//#[response(access_control_allow_origin = "*")]
+fn synset(index : String, id : String)
+        -> Result<RawJson<String>,String> {
+    let status = WordNetState::get();
     let synsets = get_synsets(&status.wordnet, &index, &id)?;
     let json = serde_json::to_string(&synsets)
         .map_err(|e| format!("Failed to serialize synset: {}", e))?;
-    Ok(Response::build()
-        .header(ContentType::JSON)
-        .header(Header::new("Access-Control-Allow-Origin","*"))
-        .sized_body(Cursor::new(json))
-        .finalize())
+    Ok(RawJson(json))
 }
 
 #[get("/json_rel/<id>")]
-fn rel_targets<'r>(id : String, status : State<WordNetState>) -> Result<Response<'r>,String> {
+fn rel_targets(id : String) -> Result<RawJson<String>, String> {
+    let status = WordNetState::get();
     let synset = status.wordnet.get_synset(&WNKey::from_str(&id)
                 .map_err(|_| format!("Not a WordNet ID"))?)
             .map_err(|e| format!("Database error: {}", e))?
@@ -440,10 +294,7 @@ fn rel_targets<'r>(id : String, status : State<WordNetState>) -> Result<Response
     }
     let json = serde_json::to_string(&targets)
         .map_err(|e| format!("Failed to serialize synset: {}", e))?;
-    Ok(Response::build()
-        .header(ContentType::JSON)
-        .sized_body(Cursor::new(json))
-        .finalize())
+    Ok(RawJson(json))
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -464,8 +315,8 @@ fn autocomplete_wn_key(k : &str) -> Result<WNKey, &'static str> {
 }
 
 #[get("/autocomplete/<index>/<key>")]
-fn autocomplete_lemma(index : String, key : String, 
-        state : State<WordNetState>) -> Result<String, String> {
+fn autocomplete_lemma(index : String, key : String) -> Result<String, String> {
+    let state = WordNetState::get();
     let mut results = Vec::new();
     if index == "lemma" {
         for s in state.wordnet.list_by_lemma(&key, "en", 10).map_err(|e| format!("Database error: {}", e))? {
@@ -531,64 +382,37 @@ fn autocomplete_lemma(index : String, key : String,
 
 enum ContentNegotiation { Html, RdfXml, Turtle, Json }
 
-impl<'a,'r> FromRequest<'a,'r> for ContentNegotiation {
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for ContentNegotiation {
     type Error = String;
-    fn from_request(request: &'a Request<'r>) -> Outcome<ContentNegotiation, String> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<ContentNegotiation, String> {
         for value in request.headers().get("Accept") {
             if value.starts_with("text/html") {
-                return Success(ContentNegotiation::Html);
+                return Outcome::Success(ContentNegotiation::Html);
             } else if value.starts_with("application/rdf+xml") {
-                return Success(ContentNegotiation::RdfXml);
+                return Outcome::Success(ContentNegotiation::RdfXml);
             } else if value.starts_with("text/turtle") {
-                return Success(ContentNegotiation::Turtle);
+                return Outcome::Success(ContentNegotiation::Turtle);
             } else if value.starts_with("application/x-turtle") {
-                return Success(ContentNegotiation::Turtle);
+                return Outcome::Success(ContentNegotiation::Turtle);
             } else if value.starts_with("application/json") {
-                return Success(ContentNegotiation::Json);
+                return Outcome::Success(ContentNegotiation::Json);
             } else if value.starts_with("application/javascript") {
-                return Success(ContentNegotiation::Json);
+                return Outcome::Success(ContentNegotiation::Json);
             }
         }
-        Success(ContentNegotiation::Html)
+        Outcome::Success(ContentNegotiation::Html)
     }
 }
     
-
-fn negotiated<'r>(state : State<WordNetState>, idx : &'static str, key : String, neg : ContentNegotiation) -> Response<'r> {
-    if key.ends_with(".rdf") {
-        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
-    } else if key.ends_with(".ttl") {
-        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::Turtle)
-    } else if key.ends_with(".json") {
-        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Json)
-    } else if key.ends_with(".html") {
-        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Html)
-    } else {
-        match neg {
-            ContentNegotiation::Html => { index(state) },
-            ContentNegotiation::RdfXml => {
-                Response::build()
-                    .status(Status::SeeOther)
-                    .header(Location(format!("/rdf/{}/{}", idx, key)))
-                    .finalize()
-            },
-            ContentNegotiation::Turtle => {
-                Response::build()
-                    .status(Status::SeeOther)
-                    .header(Location(format!("/ttl/{}/{}", idx, key)))
-                    .finalize()
-            },
-            ContentNegotiation::Json => {
-                Response::build()
-                    .status(Status::SeeOther)
-                    .header(Location(format!("/{}/{}", idx, key)))
-                    .finalize()
-            }
-        }
-    }
+#[derive(Responder)]
+enum NegotiatedResponse {
+    Redirect(Redirect),
+    Html(RawHtml<&'static str>)
 }
 
-fn renegotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) -> Response<'r> {
+fn negotiated(idx : &'static str, key : String, neg : ContentNegotiation) -> NegotiatedResponse {
+    let state = WordNetState::get();
     if key.ends_with(".rdf") {
         renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
     } else if key.ends_with(".ttl") {
@@ -600,29 +424,44 @@ fn renegotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) 
     } else {
         match neg {
             ContentNegotiation::Html => { 
-                Response::build()
-                    .status(Status::SeeOther)
-                    .header(Location(format!("/{}/{}", idx, key)))
-                    .finalize()
+                NegotiatedResponse::Html(index())
             },
             ContentNegotiation::RdfXml => {
-                Response::build()
-                    .status(Status::SeeOther)
-                    .header(Location(format!("/rdf/{}/{}", idx, key)))
-                    .finalize()
+                NegotiatedResponse::Redirect(Redirect::to(format!("/rdf/{}/{}", idx, key)))
             },
             ContentNegotiation::Turtle => {
-                Response::build()
-                    .status(Status::SeeOther)
-                    .header(Location(format!("/ttl/{}/{}", idx, key)))
-                    .finalize()
+                NegotiatedResponse::Redirect(Redirect::to(format!("/ttl/{}/{}", idx, key)))
+            },
+            ContentNegotiation::Json => {
+                NegotiatedResponse::Redirect(Redirect::to(format!("/json/{}/{}", idx, key)))
+            }
+        }
+    }
+}
+
+fn renegotiated(idx : &'static str, key : String, neg : ContentNegotiation) -> NegotiatedResponse {
+    if key.ends_with(".rdf") {
+        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
+    } else if key.ends_with(".ttl") {
+        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::Turtle)
+    } else if key.ends_with(".json") {
+        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Json)
+    } else if key.ends_with(".html") {
+        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Html)
+    } else {
+        match neg {
+            ContentNegotiation::Html => { 
+                NegotiatedResponse::Redirect(Redirect::to(format!("/{}/{}", idx, key)))
+            },
+            ContentNegotiation::RdfXml => {
+                NegotiatedResponse::Redirect(Redirect::to(format!("/rdf/{}/{}", idx, key)))
+            },
+            ContentNegotiation::Turtle => {
+                NegotiatedResponse::Redirect(Redirect::to(format!("/ttl/{}/{}", idx, key)))
             },
 
             ContentNegotiation::Json => {
-                Response::build()
-                    .status(Status::SeeOther)
-                    .header(Location(format!("/json/{}/{}", idx, key)))
-                    .finalize()
+                NegotiatedResponse::Redirect(Redirect::to(format!("/json/{}/{}", idx, key)))
             }
         }
     }
@@ -630,114 +469,102 @@ fn renegotiated<'r>(idx : &'static str, key : String, neg : ContentNegotiation) 
 
 
 #[get("/lemma/<key>")]
-fn lemma<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma", key, neg) }
+fn lemma(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma", key, neg) }
 #[get("/lemma-en/<key>")]
-fn lemma_en<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-en", key, neg) }
+fn lemma_en(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-en", key, neg) }
 #[get("/lemma-bg/<key>")]
-fn lemma_bg<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-bg", key, neg) }
+fn lemma_bg(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-bg", key, neg) }
 #[get("/lemma-cs/<key>")]
-fn lemma_cs<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-cs", key, neg) }
+fn lemma_cs(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-cs", key, neg) }
 #[get("/lemma-da/<key>")]
-fn lemma_da<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-da", key, neg) }
+fn lemma_da(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-da", key, neg) }
 #[get("/lemma-de/<key>")]
-fn lemma_de<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-de", key, neg) }
+fn lemma_de(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-de", key, neg) }
 #[get("/lemma-el/<key>")]
-fn lemma_el<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-el", key, neg) }
+fn lemma_el(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-el", key, neg) }
 #[get("/lemma-es/<key>")]
-fn lemma_es<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-es", key, neg) }
+fn lemma_es(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-es", key, neg) }
 #[get("/lemma-et/<key>")]
-fn lemma_et<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-et", key, neg) }
+fn lemma_et(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-et", key, neg) }
 #[get("/lemma-fi/<key>")]
-fn lemma_fi<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-fi", key, neg) }
+fn lemma_fi(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-fi", key, neg) }
 #[get("/lemma-fr/<key>")]
-fn lemma_fr<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-fr", key, neg) }
+fn lemma_fr(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-fr", key, neg) }
 #[get("/lemma-ga/<key>")]
-fn lemma_ga<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-ga", key, neg) }
+fn lemma_ga(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-ga", key, neg) }
 #[get("/lemma-hr/<key>")]
-fn lemma_hr<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-hr", key, neg) }
+fn lemma_hr(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-hr", key, neg) }
 #[get("/lemma-hu/<key>")]
-fn lemma_hu<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-hu", key, neg) }
+fn lemma_hu(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-hu", key, neg) }
 #[get("/lemma-it/<key>")]
-fn lemma_it<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-it", key, neg) }
+fn lemma_it(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-it", key, neg) }
 #[get("/lemma-lt/<key>")]
-fn lemma_lt<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-lt", key, neg) }
+fn lemma_lt(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-lt", key, neg) }
 #[get("/lemma-lv/<key>")]
-fn lemma_lv<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-lv", key, neg) }
+fn lemma_lv(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-lv", key, neg) }
 #[get("/lemma-mt/<key>")]
-fn lemma_mt<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-mt", key, neg) }
+fn lemma_mt(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-mt", key, neg) }
 #[get("/lemma-nl/<key>")]
-fn lemma_nl<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-nl", key, neg) }
+fn lemma_nl(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-nl", key, neg) }
 #[get("/lemma-pl/<key>")]
-fn lemma_pl<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-pl", key, neg) }
+fn lemma_pl(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-pl", key, neg) }
 #[get("/lemma-pt/<key>")]
-fn lemma_pt<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-pt", key, neg) }
+fn lemma_pt(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-pt", key, neg) }
 #[get("/lemma-ro/<key>")]
-fn lemma_ro<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-ro", key, neg) }
+fn lemma_ro(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-ro", key, neg) }
 #[get("/lemma-sk/<key>")]
-fn lemma_sk<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-sk", key, neg) }
+fn lemma_sk(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sk", key, neg) }
 #[get("/lemma-sl/<key>")]
-fn lemma_sl<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-sl", key, neg) }
+fn lemma_sl(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sl", key, neg) }
 #[get("/lemma-sv/<key>")]
-fn lemma_sv<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "lemma-sv", key, neg) }
+fn lemma_sv(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sv", key, neg) }
 
 #[get("/id/<key>")]
-fn id<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "id", key, neg) }
+fn id(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("id", key, neg) }
 #[get("/ili/<key>")]
-fn ili<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "ili", key, neg) }
+fn ili(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("ili", key, neg) }
 #[get("/sense_key/<key>")]
-fn sense_key<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "sense_key", key, neg) }
+fn sense_key(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("sense_key", key, neg) }
 #[get("/pwn30/<key>")]
-fn pwn30<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn30", key, neg) }
+fn pwn30(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn30", key, neg) }
 #[get("/pwn21/<key>")]
-fn pwn21<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn21", key, neg) }
+fn pwn21(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn21", key, neg) }
 #[get("/pwn20/<key>")]
-fn pwn20<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn20", key, neg) }
+fn pwn20(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn20", key, neg) }
 #[get("/pwn171/<key>")]
-fn pwn171<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn171", key, neg) }
+fn pwn171(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn171", key, neg) }
 #[get("/pwn17/<key>")]
-fn pwn17<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn17", key, neg) }
+fn pwn17(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn17", key, neg) }
 #[get("/pwn16/<key>")]
-fn pwn16<'r>(state : State<WordNetState>, key : String, neg : ContentNegotiation) -> Response<'r> { negotiated(state, "pwn16", key, neg) }
+fn pwn16(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn16", key, neg) }
 
 #[get("/english-wordnet-2019.ttl.gz")]
-fn ewn2019ttl<'r>(state : State<WordNetState>) -> Response<'r> {
-    if state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2019.ttl.gz").unwrap())
-            .finalize()
+fn ewn2019ttl() -> Option<(ContentType, File)> {
+    let state = WordNetState::get();
+    if *state.site.deref() == WordNetSite::English {
+        Some((ContentType::Binary, File::open("src/english-wordnet-2019.ttl.gz").unwrap()))
     } else {
-        Response::build()
-            .status(Status::NotFound)
-            .finalize()
+        None
     }
 }
 
 #[get("/english-wordnet-2019.xml.gz")]
-fn ewn2019xml<'r>(state : State<WordNetState>) -> Response<'r> {
-    if state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2019.xml.gz").unwrap())
-            .finalize()
+fn ewn2019xml() -> Option<(ContentType, File)> {
+    let state = WordNetState::get();
+    if *state.site.deref() == WordNetSite::English {
+        Some((ContentType::Binary, File::open("src/english-wordnet-2019.xml.gz").unwrap()))
     } else {
-        Response::build()
-            .status(Status::NotFound)
-            .finalize()
+        None
     }
 }
 
 #[get("/english-wordnet-2019.zip")]
-fn ewn2019zip<'r>(state : State<WordNetState>) -> Response<'r> {
-    if state.site == WordNetSite::English {
-        Response::build()
-            .header(ContentType::Binary)
-            .sized_body(File::open("src/english-wordnet-2019.zip").unwrap())
-            .finalize()
+fn ewn2019zip() -> Option<(ContentType, File)> {
+    let state = WordNetState::get();
+    if *state.site.deref() == WordNetSite::English {
+        Some((ContentType::Binary, File::open("src/english-wordnet-2019.zip").unwrap()))
     } else {
-        Response::build()
-            .status(Status::NotFound)
-            .finalize()
+        None
     }
 }
 
@@ -751,7 +578,7 @@ fn is_old_wn_key(s : &str) -> bool {
     }
 }
 #[get("/wn31/<key>")]
-fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { 
+fn wn31(key : String, neg : ContentNegotiation) -> NegotiatedResponse { 
     if is_old_wn_key(&key) {
         renegotiated("id", key[1..key.len()].to_string(), neg) 
     } else {
@@ -759,78 +586,57 @@ fn wn31<'r>(key : String, neg : ContentNegotiation) -> Response<'r> {
     }
 }
 #[get("/wn30/<key>")]
-fn wn30<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn30", key, neg) }
+fn wn30(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn30", key, neg) }
 #[get("/wn21/<key>")]
-fn wn21<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn21", key, neg) }
+fn wn21(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn21", key, neg) }
 #[get("/wn20/<key>")]
-fn wn20<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn20", key, neg) }
+fn wn20(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn20", key, neg) }
 #[get("/wn171/<key>")]
-fn wn171<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn171", key, neg) }
+fn wn171(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn171", key, neg) }
 #[get("/wn17/<key>")]
-fn wn17<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn17", key, neg) }
+fn wn17(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn17", key, neg) }
 #[get("/wn16/<key>")]
-fn wn16<'r>(key : String, neg : ContentNegotiation) -> Response<'r> { renegotiated("pwn16", key, neg) }
+fn wn16(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn16", key, neg) }
 #[get("/wn31.nt.gz")]
-fn wn31ntgz<'r>() -> Response<'r> {
-    Response::build()
-        .status(Status::SeeOther)
-        .header(Location("/static/wordnet.nt.gz".to_owned()))
-        .finalize()
+fn wn31ntgz() -> Redirect {
+    Redirect::to("/static/wordnet.nt.gz")
 }
 
 #[get("/")]
-fn index<'r>(state : State<WordNetState>) -> Response<'r> {
-    Response::build()
-        .header(html_utf8())
-        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-        //.sized_body(File::open("src/index.html").unwrap())
-        .sized_body(match state.site {
-            WordNetSite::Princeton => Cursor::new(include_str!("index.html")),
-            WordNetSite::Polylingual => Cursor::new(include_str!("polyling-index.html")),
-            WordNetSite::English => Cursor::new(include_str!("english-index.html"))
-        })
-        .finalize()
+fn index() -> RawHtml<&'static str> {
+    let state = WordNetState::get();
+    RawHtml(match state.site.deref() {
+        WordNetSite::Princeton => include_str!("index.html"),
+        WordNetSite::Polylingual => include_str!("polyling-index.html"),
+        WordNetSite::English => include_str!("english-index.html")
+    })
 }
 
 #[get("/about")]
-fn about<'r>() -> Response<'r> {
-    Response::build()
-        .header(html_utf8())
-        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-        //.sized_body(File::open("src/about.html").unwrap())
-        .sized_body(Cursor::new(include_str!("about.html")))
-        .finalize()
+fn about() -> RawHtml<&'static str> {
+    RawHtml(include_str!("about.html"))
 }
 
 #[get("/license")]
-fn license<'r>() -> Response<'r> {
-    Response::build()
-        .header(html_utf8())
-        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-        //.sized_body(File::open("src/license.html").unwrap())
-        .sized_body(Cursor::new(include_str!("license.html")))
-        .finalize()
+fn license() -> RawHtml<&'static str> {
+    RawHtml(include_str!("license.html"))
 }
 
 
 #[get("/ontology")]
-fn ontology<'r>() -> Response<'r> {
-    Response::build()
-        .header(ContentType::new("application","rdf+xml"))
-        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-        //.sized_body(File::open("src/ontology.rdf").unwrap())
-        .sized_body(Cursor::new(include_str!("ontology.rdf")))
-        .finalize()
+fn ontology() -> (ContentType, &'static str) {
+    (ContentType::new("application","rdf+xml"), include_str!("ontology.rdf"))
 }
 
 #[get("/ontology.html")]
-fn ontology_html<'r>() -> Response<'r> {
-    Response::build()
-        .header(html_utf8())
-        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
-        //.sized_body(File::open("src/ontology.html").unwrap())
-        .sized_body(Cursor::new(include_str!("ontology.html")))
-        .finalize()
+fn ontology_html() -> RawHtml<&'static str> {
+    RawHtml(include_str!("ontology.html"))
+//    Response::build()
+//        .header(html_utf8())
+//        .header(CacheControl(vec![CacheDirective::MaxAge(86400u32)]))
+//        //.sized_body(File::open("src/ontology.html").unwrap())
+//        .sized_body(Cursor::new(include_str!("ontology.html")))
+//        .finalize()
 }
 
         
@@ -856,16 +662,30 @@ impl Config {
         Ok(Config {
             wn_file: wn_file.to_string(),
             reload: matches.is_present("reload"),
-            port: port,
-            site: site
+            port,
+            site
         })
     }
 }
 
-struct WordNetState {
-    wordnet: WordNet,
-    handlebars: Handlebars,
-    site : WordNetSite
+static WORDNETSTATE_WORDNET: Lazy<Mutex<WordNet>> = Lazy::new(|| Mutex::new(WordNet::new()));
+static WORDNETSTATE_HANDLEBARS: Lazy<Mutex<Handlebars>> = Lazy::new(|| Mutex::new(Handlebars::new()));
+static WORDNETSTATE_SITE: Lazy<Mutex<WordNetSite>> = Lazy::new(|| Mutex::new(WordNetSite::Princeton));
+
+struct WordNetState<'a> {
+    wordnet: MutexGuard<'a, WordNet>,
+    handlebars: MutexGuard<'a, Handlebars>,
+    site : MutexGuard<'a, WordNetSite>
+}
+
+impl<'a> WordNetState<'a> {
+    fn get() -> WordNetState<'a> {
+        WordNetState {
+            wordnet: WORDNETSTATE_WORDNET.lock().unwrap(),
+            handlebars: WORDNETSTATE_HANDLEBARS.lock().unwrap(),
+            site: WORDNETSTATE_SITE.lock().unwrap()
+        }
+    }
 }
 
 fn lemma_escape(h : &handlebars::Helper,
@@ -911,7 +731,7 @@ fn check_path(path : &str) -> bool {
 }
 
 
-fn prepare_server(config : Config) -> Result<WordNetState, String> {
+fn prepare_server(config : Config) -> Result<(), String> {
     let mut resources = true;
     resources = config.reload || check_path("wordnet.db") && resources;
     resources = check_path("wordnet.nt.gz") && resources;
@@ -999,11 +819,13 @@ fn prepare_server(config : Config) -> Result<WordNetState, String> {
     //});
     //wordnet.by_lemma.insert("cat".to_string(), vec![WNKey::from_str("00001740-n").unwrap()]);
     eprintln!("WordNet loaded");
-    Ok(WordNetState {
-        wordnet: wordnet,
-        handlebars: handlebars,
-        site: config.site
-    })
+    let mut wordnet_state = WORDNETSTATE_WORDNET.lock().unwrap();
+    *wordnet_state = wordnet;
+    let mut handlebars_state = WORDNETSTATE_HANDLEBARS.lock().unwrap();
+    *handlebars_state = handlebars;
+    let mut site_state = WORDNETSTATE_SITE.lock().unwrap();
+    *site_state = config.site;
+    Ok(())
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -1043,12 +865,10 @@ fn main() {
             match prepare_server(config.clone()) {
                 Ok(state) => {
                     eprintln!("Starting at port {}", config.port);
-                    rocket::custom(
-                        RocketConfig::build(Environment::Production)
-                                .port(config.port)
-                                .workers(30)
-                                .finalize()
-                                .expect("Could not configure Rocket"))//, false)
+                    let mut rocket_config = RocketConfig::release_default();
+                    rocket_config.port = config.port;
+                    rocket_config.workers = 30;
+                    rocket::custom(&rocket_config)
                         .manage(state)
                         .mount("/", routes![
                                 about, ontology, ontology_html, license,

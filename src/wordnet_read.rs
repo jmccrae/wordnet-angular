@@ -1,23 +1,25 @@
 //! Code for loading wordnets from disk
-use omwn::load_omwn;
+use crate::omwn::load_omwn;
 use std::collections::HashMap;
 use std::fs::{File};
 use std::io::{BufRead,BufReader};
 use std::path::Path;
 use xml::reader::{EventReader, XmlEvent};
-use links::{load_links};
-use wordnet::{WordNetLoadError,WordNetBuilder,WNKey, WordNet};
-use wordnet_model::{Sense,Synset,Relation,PartOfSpeech,Pronunciation};
+use crate::links::{load_links};
+use crate::wordnet::{WordNetLoadError,WordNetBuilder,WNKey, WordNet};
+use crate::wordnet_model::{Sense,Synset,Relation,PartOfSpeech,Pronunciation};
 use std::str::FromStr;
 use xml::attribute::OwnedAttribute;
-use glosstag::build_glosstags;
+use crate::glosstag::build_glosstags;
 
 
 fn unmap_sense_key(sk : &str) -> String {
-    if sk.len() > 4 {
-        sk[4..].replace("__", "%").replace("-ap-", "'").replace("-sl-", "/").replace("-ex-", "!").replace("-cm-",",")
-    } else {
-        "".to_string()
+    match sk.find("-")  {
+        Some(i) => {
+            let sk = &sk[i+1..];
+            sk.replace("__", "%").replace("-ap-", "'").replace("-sl-", "/").replace("-ex-", "!").replace("-cm-",",")
+        },
+        None => "".to_string()
     }
 }
 
