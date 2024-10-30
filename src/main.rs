@@ -23,7 +23,6 @@ use wordnet::{WNKey, WordNet};
 use wordnet_model::Synset;
 use clap::{App, Arg, ArgMatches};
 use std::process::exit;
-use rocket::Response;
 use rocket::Request;
 use rocket::request::{FromRequest,Outcome};
 use rocket::http::ContentType;
@@ -81,11 +80,11 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
         WordNetSite::Polylingual => "http://polylingwn.linguistic-lod.org"
     };
     SynsetsHB {
-        synsets: synsets,
-        entries: entries,
-        index : index,
-        name: name,
-        license: license,
+        synsets,
+        entries,
+        index,
+        name,
+        license,
         site: site_url
     }
 }
@@ -93,20 +92,23 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : String,
 //fn html_utf8() -> ContentType { ContentType::with_params("text", "html", ("charset", "UTF-8")) }
 
 #[get("/ttl/<index>/<name>")]
-fn get_ttl<'r>(index : String, name : String) 
+fn get_ttl<'r>(index : &str, name : &str) 
         -> Result<(ContentType, String), String> {
     let state = WordNetState::get();
-    Ok((ContentType::new("text","turtle"), state.handlebars.render("ttl", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
+    Ok((ContentType::new("text","turtle"), 
+            state.handlebars.render("ttl", 
+                &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,
+                index.to_string(),name.to_string(),&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
 }
 
 #[get("/rdf/<index>/<name>")]
-fn get_rdf<'r>(index : String, name : String) 
+fn get_rdf<'r>(index : &str, name : &str) 
         -> Result<(ContentType, String), String> {
     let state = WordNetState::get();
-    Ok((ContentType::new("application","rdf+xml"), state.handlebars.render("rdfxml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
+    Ok((ContentType::new("application","rdf+xml"), state.handlebars.render("rdfxml", &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index.to_string(),name.to_string(),&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
@@ -115,7 +117,7 @@ fn get_rdf<'r>(index : String, name : String)
 
 
 #[get("/xml/<index>/<name>")]
-fn get_xml<'r>(index : String, name : String) 
+fn get_xml<'r>(index : &str, name : &str) 
         -> Result<(ContentType, String), String> {
     let state = WordNetState::get();
     let xml_template = match *state.site {
@@ -123,14 +125,14 @@ fn get_xml<'r>(index : String, name : String)
         WordNetSite::English => "xml-english",
         _ => "xml"
     };
-    Ok((ContentType::XML, state.handlebars.render(xml_template, &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index,name,&state.site)).map_err(|e| {
+    Ok((ContentType::XML, state.handlebars.render(xml_template, &make_synsets_hb(get_synsets(&state.wordnet, &index, &name)?,index.to_string(),name.to_string(),&state.site)).map_err(|e| {
                     eprintln!("{}", e);
                     "Could not apply template"
                 })?))
 }
 
 #[get("/flag/<code>")]
-fn get_flag<'r>(code : String) -> Result<(ContentType, File),::std::io::Error> {
+fn get_flag<'r>(code : &str) -> Result<(ContentType, File),::std::io::Error> {
     Ok((ContentType::GIF, File::open(&format!("flags/{}.gif", code))?))
 }
 
@@ -141,7 +143,7 @@ enum StaticResponse {
 }
 
 #[get("/static/<name>")]
-fn get_static(name : String) -> Option<StaticResponse> {
+fn get_static(name : &str) -> Option<StaticResponse> {
     let state = WordNetState::get();
     if name == "app.js" {
         if *state.site == WordNetSite::Princeton || *state.site == WordNetSite::English {
@@ -222,7 +224,6 @@ fn get_static(name : String) -> Option<StaticResponse> {
         for path in paths {
             let path_str = path.unwrap().file_name().to_string_lossy().into_owned();
             if path_str == name {
-                let mut r = Response::build();
                 if name.ends_with(".css") {
                     return Some(StaticResponse::F((ContentType::CSS, File::open("src/res/".to_owned() + &name).unwrap())))
                 } else if name.ends_with(".js") {
@@ -268,7 +269,7 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
 
 #[get("/json/<index>/<id>")]
 //#[response(access_control_allow_origin = "*")]
-fn synset(index : String, id : String)
+fn synset(index : &str, id : &str)
         -> Result<RawJson<String>,String> {
     let status = WordNetState::get();
     let synsets = get_synsets(&status.wordnet, &index, &id)?;
@@ -278,7 +279,7 @@ fn synset(index : String, id : String)
 }
 
 #[get("/json_rel/<id>")]
-fn rel_targets(id : String) -> Result<RawJson<String>, String> {
+fn rel_targets(id : &str) -> Result<RawJson<String>, String> {
     let status = WordNetState::get();
     let synset = status.wordnet.get_synset(&WNKey::from_str(&id)
                 .map_err(|_| format!("Not a WordNet ID"))?)
@@ -315,11 +316,11 @@ fn autocomplete_wn_key(k : &str) -> Result<WNKey, &'static str> {
 }
 
 #[get("/autocomplete/<index>/<key>")]
-fn autocomplete_lemma(index : String, key : String) -> Result<String, String> {
+fn autocomplete_lemma(index : &str, key : &str) -> Result<String, String> {
     let state = WordNetState::get();
     let mut results = Vec::new();
     if index == "lemma" {
-        for s in state.wordnet.list_by_lemma(&key, "en", 10).map_err(|e| format!("Database error: {}", e))? {
+        for s in state.wordnet.list_by_lemma(key, "en", 10).map_err(|e| format!("Database error: {}", e))? {
 //            if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -329,7 +330,7 @@ fn autocomplete_lemma(index : String, key : String) -> Result<String, String> {
         }   
     } else if index.starts_with("lemma") {
         let lang = index[6..].to_string();
-        for s in state.wordnet.list_by_lemma(&key, &lang, 10).map_err(|e| format!("Database error: {}", e))? {
+        for s in state.wordnet.list_by_lemma(key, &lang, 10).map_err(|e| format!("Database error: {}", e))? {
 //            if s.starts_with(&key) {
                 results.push(AutocompleteResult {
                     display: s.to_string(),
@@ -411,16 +412,15 @@ enum NegotiatedResponse {
     Html(RawHtml<&'static str>)
 }
 
-fn negotiated(idx : &'static str, key : String, neg : ContentNegotiation) -> NegotiatedResponse {
-    let state = WordNetState::get();
+fn negotiated(idx : &'static str, key : &str, neg : ContentNegotiation) -> NegotiatedResponse {
     if key.ends_with(".rdf") {
-        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
+        renegotiated(idx,&key[0..(key.len()-4)], ContentNegotiation::RdfXml)
     } else if key.ends_with(".ttl") {
-        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::Turtle)
+        renegotiated(idx,&key[0..(key.len()-4)], ContentNegotiation::Turtle)
     } else if key.ends_with(".json") {
-        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Json)
+        renegotiated(idx,&key[0..(key.len()-5)], ContentNegotiation::Json)
     } else if key.ends_with(".html") {
-        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Html)
+        renegotiated(idx,&key[0..(key.len()-5)], ContentNegotiation::Html)
     } else {
         match neg {
             ContentNegotiation::Html => { 
@@ -439,15 +439,15 @@ fn negotiated(idx : &'static str, key : String, neg : ContentNegotiation) -> Neg
     }
 }
 
-fn renegotiated(idx : &'static str, key : String, neg : ContentNegotiation) -> NegotiatedResponse {
+fn renegotiated(idx : &'static str, key : &str, neg : ContentNegotiation) -> NegotiatedResponse {
     if key.ends_with(".rdf") {
-        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::RdfXml)
+        renegotiated(idx,&key[0..(key.len()-4)], ContentNegotiation::RdfXml)
     } else if key.ends_with(".ttl") {
-        renegotiated(idx,key[0..(key.len()-4)].to_string(), ContentNegotiation::Turtle)
+        renegotiated(idx,&key[0..(key.len()-4)], ContentNegotiation::Turtle)
     } else if key.ends_with(".json") {
-        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Json)
+        renegotiated(idx,&key[0..(key.len()-5)], ContentNegotiation::Json)
     } else if key.ends_with(".html") {
-        renegotiated(idx,key[0..(key.len()-5)].to_string(), ContentNegotiation::Html)
+        renegotiated(idx,&key[0..(key.len()-5)], ContentNegotiation::Html)
     } else {
         match neg {
             ContentNegotiation::Html => { 
@@ -469,74 +469,74 @@ fn renegotiated(idx : &'static str, key : String, neg : ContentNegotiation) -> N
 
 
 #[get("/lemma/<key>")]
-fn lemma(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma", key, neg) }
+fn lemma(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma", key, neg) }
 #[get("/lemma-en/<key>")]
-fn lemma_en(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-en", key, neg) }
+fn lemma_en(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-en", key, neg) }
 #[get("/lemma-bg/<key>")]
-fn lemma_bg(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-bg", key, neg) }
+fn lemma_bg(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-bg", key, neg) }
 #[get("/lemma-cs/<key>")]
-fn lemma_cs(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-cs", key, neg) }
+fn lemma_cs(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-cs", key, neg) }
 #[get("/lemma-da/<key>")]
-fn lemma_da(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-da", key, neg) }
+fn lemma_da(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-da", key, neg) }
 #[get("/lemma-de/<key>")]
-fn lemma_de(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-de", key, neg) }
+fn lemma_de(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-de", key, neg) }
 #[get("/lemma-el/<key>")]
-fn lemma_el(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-el", key, neg) }
+fn lemma_el(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-el", key, neg) }
 #[get("/lemma-es/<key>")]
-fn lemma_es(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-es", key, neg) }
+fn lemma_es(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-es", key, neg) }
 #[get("/lemma-et/<key>")]
-fn lemma_et(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-et", key, neg) }
+fn lemma_et(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-et", key, neg) }
 #[get("/lemma-fi/<key>")]
-fn lemma_fi(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-fi", key, neg) }
+fn lemma_fi(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-fi", key, neg) }
 #[get("/lemma-fr/<key>")]
-fn lemma_fr(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-fr", key, neg) }
+fn lemma_fr(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-fr", key, neg) }
 #[get("/lemma-ga/<key>")]
-fn lemma_ga(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-ga", key, neg) }
+fn lemma_ga(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-ga", key, neg) }
 #[get("/lemma-hr/<key>")]
-fn lemma_hr(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-hr", key, neg) }
+fn lemma_hr(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-hr", key, neg) }
 #[get("/lemma-hu/<key>")]
-fn lemma_hu(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-hu", key, neg) }
+fn lemma_hu(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-hu", key, neg) }
 #[get("/lemma-it/<key>")]
-fn lemma_it(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-it", key, neg) }
+fn lemma_it(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-it", key, neg) }
 #[get("/lemma-lt/<key>")]
-fn lemma_lt(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-lt", key, neg) }
+fn lemma_lt(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-lt", key, neg) }
 #[get("/lemma-lv/<key>")]
-fn lemma_lv(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-lv", key, neg) }
+fn lemma_lv(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-lv", key, neg) }
 #[get("/lemma-mt/<key>")]
-fn lemma_mt(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-mt", key, neg) }
+fn lemma_mt(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-mt", key, neg) }
 #[get("/lemma-nl/<key>")]
-fn lemma_nl(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-nl", key, neg) }
+fn lemma_nl(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-nl", key, neg) }
 #[get("/lemma-pl/<key>")]
-fn lemma_pl(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-pl", key, neg) }
+fn lemma_pl(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-pl", key, neg) }
 #[get("/lemma-pt/<key>")]
-fn lemma_pt(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-pt", key, neg) }
+fn lemma_pt(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-pt", key, neg) }
 #[get("/lemma-ro/<key>")]
-fn lemma_ro(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-ro", key, neg) }
+fn lemma_ro(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-ro", key, neg) }
 #[get("/lemma-sk/<key>")]
-fn lemma_sk(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sk", key, neg) }
+fn lemma_sk(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sk", key, neg) }
 #[get("/lemma-sl/<key>")]
-fn lemma_sl(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sl", key, neg) }
+fn lemma_sl(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sl", key, neg) }
 #[get("/lemma-sv/<key>")]
-fn lemma_sv(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sv", key, neg) }
+fn lemma_sv(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("lemma-sv", key, neg) }
 
 #[get("/id/<key>")]
-fn id(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("id", key, neg) }
+fn id(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("id", key, neg) }
 #[get("/ili/<key>")]
-fn ili(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("ili", key, neg) }
+fn ili(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("ili", key, neg) }
 #[get("/sense_key/<key>")]
-fn sense_key(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("sense_key", key, neg) }
+fn sense_key(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("sense_key", key, neg) }
 #[get("/pwn30/<key>")]
-fn pwn30(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn30", key, neg) }
+fn pwn30(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn30", key, neg) }
 #[get("/pwn21/<key>")]
-fn pwn21(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn21", key, neg) }
+fn pwn21(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn21", key, neg) }
 #[get("/pwn20/<key>")]
-fn pwn20(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn20", key, neg) }
+fn pwn20(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn20", key, neg) }
 #[get("/pwn171/<key>")]
-fn pwn171(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn171", key, neg) }
+fn pwn171(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn171", key, neg) }
 #[get("/pwn17/<key>")]
-fn pwn17(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn17", key, neg) }
+fn pwn17(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn17", key, neg) }
 #[get("/pwn16/<key>")]
-fn pwn16(key : String, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn16", key, neg) }
+fn pwn16(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { negotiated("pwn16", key, neg) }
 
 #[get("/english-wordnet-2019.ttl.gz")]
 fn ewn2019ttl() -> Option<(ContentType, File)> {
@@ -578,25 +578,25 @@ fn is_old_wn_key(s : &str) -> bool {
     }
 }
 #[get("/wn31/<key>")]
-fn wn31(key : String, neg : ContentNegotiation) -> NegotiatedResponse { 
+fn wn31(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { 
     if is_old_wn_key(&key) {
-        renegotiated("id", key[1..key.len()].to_string(), neg) 
+        renegotiated("id", &key[1..key.len()], neg) 
     } else {
-        renegotiated("lemma", key[..(key.len()-2)].to_string(), neg)
+        renegotiated("lemma", &key[..(key.len()-2)], neg)
     }
 }
 #[get("/wn30/<key>")]
-fn wn30(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn30", key, neg) }
+fn wn30(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn30", key, neg) }
 #[get("/wn21/<key>")]
-fn wn21(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn21", key, neg) }
+fn wn21(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn21", key, neg) }
 #[get("/wn20/<key>")]
-fn wn20(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn20", key, neg) }
+fn wn20(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn20", key, neg) }
 #[get("/wn171/<key>")]
-fn wn171(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn171", key, neg) }
+fn wn171(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn171", key, neg) }
 #[get("/wn17/<key>")]
-fn wn17(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn17", key, neg) }
+fn wn17(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn17", key, neg) }
 #[get("/wn16/<key>")]
-fn wn16(key : String, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn16", key, neg) }
+fn wn16(key : &str, neg : ContentNegotiation) -> NegotiatedResponse { renegotiated("pwn16", key, neg) }
 #[get("/wn31.nt.gz")]
 fn wn31ntgz() -> Redirect {
     Redirect::to("/static/wordnet.nt.gz")
@@ -835,7 +835,8 @@ enum WordNetSite {
     English
 }
 
-fn main() {
+#[launch]
+fn rocket() -> _ {
     let mut app = App::new("wordnet-angular")
         .version("1.0")
         .author("John P. McCrae <john@mccr.ae>")
@@ -886,7 +887,7 @@ fn main() {
                                 wn171, wn16, wn31, wn31ntgz,
                                 pwn30, pwn21, pwn20, pwn17,
                                 pwn171, pwn16, ewn2019zip, 
-                                ewn2019xml, ewn2019ttl]).launch();
+                                ewn2019xml, ewn2019ttl])
                 },
                 Err(msg) => {
                     eprintln!("{}", msg);

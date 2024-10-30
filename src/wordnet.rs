@@ -462,7 +462,7 @@ impl WordNet {
                          &[&key.to_string(), &limit],ok_wnkey)
                          // |s| { WNKey::from_str(&s) })
     }
-    pub fn list_by_lemma(&self, lemma : &String, language : &str,
+    pub fn list_by_lemma(&self, lemma : &str, language : &str,
                           limit : u32) -> Result<Vec<String>,WordNetLoadError> {
         sqlite_query_vec("SELECT DISTINCT lemma FROM lemmas
                           WHERE form >= ? and form like ? and language=?
@@ -474,7 +474,7 @@ impl WordNet {
                          &limit], 
                          ok_wordnet_str)
     }
-    pub fn list_by_ili(&self, ili : &String,
+    pub fn list_by_ili(&self, ili : &str,
                         limit : u32) -> Result<Vec<String>,WordNetLoadError> {
         sqlite_query_vec("SELECT DISTINCT ili FROM synsets
                           WHERE ili >= ?
@@ -483,7 +483,7 @@ impl WordNet {
                          &[&ili.to_string(), &limit], 
                          ok_wordnet_str)
     }
-    pub fn list_by_sense_key(&self, sense_key : &String,
+    pub fn list_by_sense_key(&self, sense_key : &str,
                               limit : u32) -> Result<Vec<String>,WordNetLoadError> {
         sqlite_query_vec("SELECT DISTINCT sense_key FROM sense_keys
                           WHERE sense_key >= ?
@@ -502,11 +502,15 @@ impl WordNet {
                          ok_wnkey)// { WNKey::from_str(&s) })
     }
 
+    #[allow(dead_code)] 
+    // used in dump.rs not main.rs
     pub fn entries(&self) -> Result<u32, WordNetLoadError> {
         sqlite_opt("SELECT COUNT(*) FROM lemmas")
             .map(|x| x.unwrap())
     }
 
+    #[allow(dead_code)]
+    // used in dump.rs not main.rs
     pub fn synsets(&self) -> Result<u32, WordNetLoadError> {
         sqlite_opt("SELECT COUNT(*) FROM synsets")
             .map(|x| x.unwrap())
