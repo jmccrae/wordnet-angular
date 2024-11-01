@@ -130,14 +130,82 @@ angular.module('app').component('synset', {
                         ctrl.targetsynsetsextra.slice(0,maxEntriesToLoad));
                 ctrl.targetsynsetsextra = ctrl.targetsynsetsextra.slice(maxEntriesToLoad,ctrl.targetsynsetsextra.length);
             };
-            ctrl.replaceSubcat = function(subcat, lemma) {
-                if(lemma.includes(' ') && subcat.includes('----s')) {
-                    let words = lemma.split(' ');
-                    let word1 = words.shift();
-                    let subcat2 = subcat.replace('----s', "----s " + words.join(" "));
-                    return subcat2.replace('----', word1);
+            ctrl.getSubcats = function(synset) {
+                let subcats = {};
+                for(i = 0; i < synset.lemmas.length; i++) {
+                    let lemma = synset.lemmas[i].lemma;
+                    for(j = 0; j < synset.lemmas[i].subcats.length; j++) {
+                        let subcat = synset.lemmas[i].subcats[j];
+                        if (subcats[subcat] === undefined) {
+                            subcats[subcat] = [];
+                        }
+                        subcats[subcat].push(lemma);
+                    }
+                }
+                // Convert dict to list
+                subcats = Object.keys(subcats).map(function(key) {
+                    return [key, subcats[key]];
+                });
+                return subcats;
+            };
+            ctrl.thirdPersonForm = function(word) {
+                if (word.endsWith('s')) {
+                    return word + "es";
+                } else if (word.endsWith('ay') || word.endsWith('ey') || word.endsWith('iy') || word.endsWith('oy') || word.endsWith('uy')) {
+                    return word + "s";
+                } else if (word.endsWith('y')) {
+                    return word.slice(0, -1) + "ies";
+                } else if (word.endsWith('e')) {
+                    return word + "s";
+                } else if (word.endsWith('o')) {
+                    return word + "es";
+                } else if (word.endsWith('ch')) {
+                    return word + "es";
+                } else if (word.endsWith('sh')) {
+                    return word + "es";
+                } else if (word.endsWith('x')) {
+                    return word + "es";
                 } else {
-                    return subcat.replace('----', lemma);
+                    return word + "s";
+                }
+            };
+            ctrl.gerundForm = function(word) {
+                if (word.endsWith('e')) {
+                    return word.slice(0, -1) + "ing";
+                } else if (word.endsWith('ie')) {
+                    return word.slice(0, -2) + "ying";
+                } else {
+                    return word + "ing";
+                }
+            };
+            ctrl.replaceSubcat = function(subcats) {
+                let subcat = subcats[0];
+                let mapped_lemmas = [];
+                if(subcat.includes('----s')) {
+                    for(i = 0; i < subcats[1].length; i++) {
+                        if (subcats[1][i].includes(' ')) {
+                            mapped_lemmas.push(
+                                ctrl.thirdPersonForm(subcats[1][i].split(' ')[0]) + " " + subcats[1][i].split(' ').slice(1).join(' '));
+                        } else {
+                            mapped_lemmas.push(ctrl.thirdPersonForm(subcats[1][i]));
+                        }
+                    }
+                    return subcat.replace('----s', mapped_lemmas.join('/'));
+                } else if(subcat.includes('----ing')) {
+                    for(i = 0; i < subcats[1].length; i++) {
+                        if (subcats[1][i].includes(' ')) {
+                            mapped_lemmas.push(
+                                ctrl.gerundForm(subcats[1][i].split(' ')[0]) + " " + subcats[1][i].split(' ').slice(1).join(' '));
+                        } else {
+                            mapped_lemmas.push(ctrl.gerundForm(subcats[1][i]));
+                        }
+                    }
+                    return subcat.replace('----ing', mapped_lemmas.join('/'));
+                } else {
+                    for(i = 0; i < subcats[1].length; i++) {
+                        mapped_lemmas.push(subcats[1][i]);
+                    }
+                    return subcat.replace('----', mapped_lemmas.join('/'));
                 }
             };
         }
