@@ -218,6 +218,12 @@ fn get_static(name : &str) -> Option<StaticResponse> {
         Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2023.xml.gz").unwrap())))
      } else if name == "english-wordnet-2023.zip" && *state.site == WordNetSite::English {
         Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2023.zip").unwrap())))
+     } else if name == "english-wordnet-2024.ttl.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2024.ttl.gz").unwrap())))
+     } else if name == "english-wordnet-2024.xml.gz" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2024.xml.gz").unwrap())))
+     } else if name == "english-wordnet-2024.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2024.zip").unwrap())))
       } else {
         let paths = fs::read_dir("src/res/").expect("No resource directory");
 
