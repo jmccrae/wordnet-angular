@@ -17,7 +17,7 @@
    a ontolex:LexicalSense .
 {{#each relations}}{{#if src_word}}
 [] a ontolex:SenseRelation ;
-  vartrans:source <{{../../../site}}/lemma/{{lemma_escape ../lemmas.0.lemma}}#{{lemma_escape ../lemmas.0.lemma}}-{{../id}}>
+  vartrans:source <{{../../../site}}/lemma/{{lemma_escape ../lemmas.0.lemma}}#{{lemma_escape ../lemmas.0.lemma}}-{{../id}}> ;
   vartrans:category wn:{{rel_type}} ;
   vartrans:target <{{../../../site}}/lemma/{{lemma_escape trg_word}}#{{lemma_escape trg_word}}-{{target}}> .
 {{/if}}{{/each}}
