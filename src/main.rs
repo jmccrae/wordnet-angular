@@ -152,6 +152,8 @@ fn get_static(name : &str) -> Option<StaticResponse> {
             Some(StaticResponse::I((ContentType::JavaScript, include_str!("polyling-app.js"))))
         }
 
+    } else if name == "favicon.ico" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Icon, File::open("src/english-favicon.ico").unwrap())))
     } else if name == "favicon.ico" {
         Some(StaticResponse::F((ContentType::Icon, File::open("src/favicon.ico").unwrap())))
     } else if name == "synset.html" {
