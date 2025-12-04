@@ -31,7 +31,7 @@
 wnid:{{id}}
   wn:ili ili:{{ili}} ;
   wn:partOfSpeech wn:{{long_pos pos}} ;
-  dc:subject "{{subject}}" ;
+  wn:lexfile "{{subject}}" ;
   wn:definition [ rdf:value "{{definition}}"@en ] ;
 {{#each relations}}{{#if src_word}}{{else}}  wn:{{rel_type}} wnid:{{target}} ; {{/if}}{{/each}}
 {{#each examples}}  wn:example [ rdf:value "{{escape_quote this}}"@en ] ;
