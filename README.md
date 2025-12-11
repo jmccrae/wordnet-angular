@@ -1,10 +1,6 @@
 # WordNet Angular
 
-Princeton WordNet Interface based on Angular.js and Rust, this is currently used to run three websites:
-
-https://polylingwn.linguistic-lod.org/
-
-http://wordnet-rdf.princeton.edu
+Princeton WordNet Interface based on Angular.js and Rust, this is currently used to run the following websites:
 
 https://en-word.net/
 
