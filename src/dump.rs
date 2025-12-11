@@ -19,7 +19,7 @@ mod wordnet_read;
 
 use crate::wordnet::{WNKey,WordNet};
 use crate::wordnet_model::Synset;
-use std::collections::{HashMap,HashSet};
+use std::collections::HashMap;
 use clap::{App,Arg};
 use handlebars::{Handlebars};
 use std::str::FromStr;
@@ -65,8 +65,7 @@ fn get_synsets(wordnet : &WordNet, index : &str, id : &str)
 }
 
 fn make_synsets_hb(synsets : Vec<Synset>, index : &str, 
-                   name : &str, site : &WordNetSite,
-                   entries_produced : &mut HashSet<String>) -> SynsetsHB {
+                   name : &str, site : &WordNetSite) -> SynsetsHB {
     let mut entries = HashMap::new();
     for synset in synsets.iter() {
         for sense in synset.lemmas.iter() {
@@ -83,12 +82,9 @@ fn make_synsets_hb(synsets : Vec<Synset>, index : &str,
             } else {
                 format!("{}-{}", sense.lemma, synset.pos.to_string())
             };
-            if !entries_produced.contains(&id) {
-                entries_produced.insert(id.clone());
-                entries.entry(id)
-                    .or_insert_with(|| Vec::new())
-                    .push(s2);
-            }
+            entries.entry(id)
+                .or_insert_with(|| Vec::new())
+                .push(s2);
         }
     }
     let license = match site {
@@ -248,14 +244,11 @@ println!("
 
     let filter = matches.value_of("pos").unwrap_or("");
 
-    let mut entries = HashSet::new();
-
     for synset_id in wordnet.get_synset_ids().expect("Could not read database") {
         if synset_id.ends_with(filter) {
             println!("{}", handlebars.render("ttl", 
                 &make_synsets_hb(get_synsets(&wordnet, "id", &synset_id.to_string()).
-                                 expect("Could not get synsets"),"id",&synset_id.to_string(), &site, 
-                                 &mut entries))
+                                 expect("Could not get synsets"),"id",&synset_id.to_string(), &site))
                      .expect("Could not apply template"));
         }
     }
