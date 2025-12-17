@@ -232,12 +232,16 @@ fn get_static(name : &str) -> Option<StaticResponse> {
         Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2025.xml.gz").unwrap())))
      } else if name == "english-wordnet-2025.zip" && *state.site == WordNetSite::English {
         Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2025.zip").unwrap())))
+     } else if name == "english-wordnet-2025-json.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2025-json.zip").unwrap())))
      } else if name == "english-wordnet-2025-plus.ttl.gz" && *state.site == WordNetSite::English {
         Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2025-plus.ttl.gz").unwrap())))
      } else if name == "english-wordnet-2025-plus.xml.gz" && *state.site == WordNetSite::English {
         Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2025-plus.xml.gz").unwrap())))
      } else if name == "english-wordnet-2025-plus.zip" && *state.site == WordNetSite::English {
         Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2025-plus.zip").unwrap())))
+     } else if name == "english-wordnet-2025-plus-json.zip" && *state.site == WordNetSite::English {
+        Some(StaticResponse::F((ContentType::Binary, File::open("src/english-wordnet-2025-plus-json.zip").unwrap())))
       } else {
         let paths = fs::read_dir("src/res/").expect("No resource directory");
 
